@@ -64,6 +64,10 @@ const MazeRunner = () => {
                     scene.bgGraphics.clear();
                     drawMenuBackground(scene, isDark);
                 }
+                // Also update debug hint if exists
+                if (scene.hintText) {
+                    scene.hintText.setFill(isDark ? "#64748b" : "#666666");
+                }
             } catch { }
         }
 
@@ -127,10 +131,11 @@ const MazeRunner = () => {
 
         class MazeRunnerScene extends Phaser.Scene {
             constructor() { super({ key: "MazeRunnerScene" }); }
+
             preload() { }
 
             create() {
-                this.win = false; // <-- Reset win state
+                this.win = false;
                 const CELL_COUNT_X = 21;
                 const CELL_COUNT_Y = 17;
                 const TILE = 36;
@@ -176,9 +181,21 @@ const MazeRunner = () => {
 
                 this.cursors = this.input.keyboard.createCursorKeys();
                 this.keysWASD = this.input.keyboard.addKeys("W,A,S,D");
+                this.keyI = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.I);
 
                 // HUD
                 this.hud = this.add.text(10, 8, "Arrow keys / WASD to move. Reach the green tile to win.", { font: "16px Arial", fill: isDark ? "#e5e7eb" : "#111111" }).setScrollFactor(0);
+
+                // Debug hint (initially hidden)
+                this.hintText = this.add.text(10, 30, "[I] Toggle debug view", {
+                    font: "12px Arial",
+                    fill: isDark ? "#64748b" : "#666666"
+                }).setScrollFactor(0).setVisible(false);
+
+                // Debug overlay
+                this.debugMode = false;
+                this.debugGraphics = this.add.graphics();
+                this.debugLabels = [];
 
                 // Win text & Retry button
                 this.winText = this.add.text(this.cameras.main.width / 2, this.cameras.main.height / 2, "You win!", { font: "48px Arial", fill: isDark ? "#fff59d" : "#ffff66" }).setOrigin(0.5).setDepth(100).setVisible(false);
@@ -207,6 +224,14 @@ const MazeRunner = () => {
 
             update() {
                 if (!this.player || this.win) return;
+
+                // Toggle debug on 'I' press
+                if (Phaser.Input.Keyboard.JustDown(this.keyI)) {
+                    this.debugMode = !this.debugMode;
+                    this.hintText.setVisible(this.debugMode);
+                    this.updateDebugOverlay();
+                }
+
                 const speed = 220;
                 const body = this.player.body;
                 let vx = 0, vy = 0;
@@ -215,6 +240,56 @@ const MazeRunner = () => {
                 if (this.cursors.up.isDown || this.keysWASD.W.isDown) vy = -speed;
                 else if (this.cursors.down.isDown || this.keysWASD.S.isDown) vy = speed;
                 body.setVelocity(vx, vy);
+            }
+
+            updateDebugOverlay() {
+                // Clear old debug visuals
+                this.debugGraphics.clear();
+                this.debugLabels.forEach(label => label.destroy());
+                this.debugLabels = [];
+
+                if (!this.debugMode) return;
+
+                const textStyle = { font: "10px monospace", fill: "#ffff00" };
+
+                const drawDebugFor = (obj, label) => {
+                    const bounds = obj.getBounds();
+                    this.debugGraphics.lineStyle(1, 0x00ffff, 0.8);
+                    this.debugGraphics.strokeRectShape(bounds);
+
+                    const text = this.add.text(bounds.x, bounds.y - 15, `${label}: (${Math.round(obj.x)}, ${Math.round(obj.y)})`, textStyle)
+                        .setScrollFactor(0)
+                        .setDepth(1000);
+                    this.debugLabels.push(text);
+                };
+
+                // Player
+                drawDebugFor(this.player, "Player");
+
+                // Finish
+                drawDebugFor(this.finish, "Finish");
+
+                // Walls (limit to avoid clutter)
+                const maxWallLabels = 5;
+                this.walls.forEach((wall, i) => {
+                    const bounds = wall.getBounds();
+                    this.debugGraphics.lineStyle(1, 0xff00ff, 0.6);
+                    this.debugGraphics.strokeRectShape(bounds);
+
+                    if (i < maxWallLabels) {
+                        const wallText = this.add.text(bounds.x, bounds.y - 12, `Wall ${i}`, {
+                            font: "8px monospace",
+                            fill: "#ff00ff"
+                        }).setScrollFactor(0).setDepth(1000);
+                        this.debugLabels.push(wallText);
+                    }
+                });
+            }
+
+            shutdown() {
+                // Clean up debug objects (optional, since scene restart re-creates everything)
+                this.debugGraphics?.destroy();
+                this.debugLabels?.forEach(l => l.destroy());
             }
         }
 
