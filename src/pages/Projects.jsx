@@ -1,7 +1,8 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import DateComponent from "../components/DateComponent";
 
-// Example projects array with some empty objects
+// Example projects array (Maze Runner included)
 const projects = [
     {
         name: "Apartment Management System",
@@ -10,8 +11,13 @@ const projects = [
         image: "https://via.placeholder.com/600x400",
         link: "https://github.com/Railen-Laminers/Apartment-Management.git",
     },
-    { category: "games" },
-    { category: "app" },
+    {
+        name: "Maze Runner Game",
+        date: "2025-12-21",
+        category: "games",
+        image: "https://via.placeholder.com/600x400?text=Maze+Runner",
+        link: "/maze-runner",
+    },
 ];
 
 function Projects() {
@@ -21,13 +27,12 @@ function Projects() {
         setOpenCategory(openCategory === category ? null : category);
     };
 
-    // Filter valid projects (those with a name)
+    // Filter valid projects
     const validProjects = projects.filter((p) => p && p.name && p.category);
 
-    // Extract **all categories** from all projects (even empty ones)
+    // Extract all categories
     const categories = [...new Set(projects.map((p) => p.category).filter(Boolean))];
 
-    // If no projects at all
     if (projects.length === 0 || categories.length === 0) {
         return (
             <section
@@ -44,6 +49,9 @@ function Projects() {
         );
     }
 
+    // Helper function to detect external links
+    const isExternalLink = (url) => /^https?:\/\//.test(url);
+
     return (
         <section
             id="projects"
@@ -59,7 +67,6 @@ function Projects() {
 
             <div className="space-y-4">
                 {categories.map((category) => {
-                    // Get valid projects for this category
                     const categoryProjects = validProjects.filter(
                         (project) => project.category === category
                     );
@@ -80,9 +87,7 @@ function Projects() {
                             </button>
 
                             <div
-                                className={`overflow-hidden transition-all duration-300 ease-in-out ${openCategory === category
-                                    ? "max-h-[1000px]"
-                                    : "max-h-0"
+                                className={`overflow-hidden transition-all duration-300 ease-in-out ${openCategory === category ? "max-h-[1000px]" : "max-h-0"
                                     }`}
                             >
                                 <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -111,14 +116,26 @@ function Projects() {
                                                         {project.name}
                                                     </h4>
                                                     <DateComponent date={project.date} />
-                                                    <a
-                                                        href={project.link}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="inline-block mt-2 text-sm border border-accent-light dark:border-accent-dark text-primary-dark dark:text-primary-light px-3 py-1 rounded-md transition-all duration-300 hover:bg-accent-light/10 dark:hover:bg-accent-dark/10 hover:scale-105"
-                                                    >
-                                                        View Project
-                                                    </a>
+
+                                                    {project.link && (
+                                                        isExternalLink(project.link) ? (
+                                                            <a
+                                                                href={project.link}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="inline-block mt-2 text-sm border border-accent-light dark:border-accent-dark text-primary-dark dark:text-primary-light px-3 py-1 rounded-md transition-all duration-300 hover:bg-accent-light/10 dark:hover:bg-accent-dark/10 hover:scale-105"
+                                                            >
+                                                                View Project
+                                                            </a>
+                                                        ) : (
+                                                            <Link
+                                                                to={project.link}
+                                                                className="inline-block mt-2 text-sm border border-accent-light dark:border-accent-dark text-primary-dark dark:text-primary-light px-3 py-1 rounded-md transition-all duration-300 hover:bg-accent-light/10 dark:hover:bg-accent-dark/10 hover:scale-105"
+                                                            >
+                                                                View Project
+                                                            </Link>
+                                                        )
+                                                    )}
                                                 </div>
                                             </article>
                                         ))

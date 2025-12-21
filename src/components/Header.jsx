@@ -2,17 +2,35 @@ import { useState, useEffect } from "react";
 import { FiSun, FiMoon } from "react-icons/fi";
 
 function Header() {
-    const [darkMode, setDarkMode] = useState(false);
+    // Lazy initialize: read from localStorage if available, otherwise fall back to OS preference
+    const [darkMode, setDarkMode] = useState(() => {
+        if (typeof window === "undefined") return false;
+        try {
+            const stored = localStorage.getItem("darkMode");
+            if (stored !== null) return stored === "true";
+        } catch (e) {
+            // ignore localStorage errors
+        }
+        // fallback to system preference
+        return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    });
+
     const [menuOpen, setMenuOpen] = useState(false);
     const [activeSection, setActiveSection] = useState("about");
 
     const navItems = ["About", "Projects"]; // Removed "Contact"
 
-    // Apply dark class to html root when toggled
+    // Apply dark class to html root when toggled & persist preference
     useEffect(() => {
         const html = document.documentElement;
         if (darkMode) html.classList.add("dark");
         else html.classList.remove("dark");
+
+        try {
+            localStorage.setItem("darkMode", String(darkMode));
+        } catch (e) {
+            // ignore write errors (e.g. private mode)
+        }
     }, [darkMode]);
 
     // Close mobile menu when resizing to desktop widths
@@ -55,6 +73,7 @@ function Header() {
             ${darkMode ? "bg-gray-700" : "bg-gray-300"}`}
             aria-pressed={darkMode}
             aria-label="Toggle dark mode"
+            title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
         >
             <span
                 className={`absolute left-1 flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-md transform transition-all duration-300 ease-in-out
@@ -126,8 +145,8 @@ function Header() {
                 {/* Mobile menu */}
                 <div
                     className={`md:hidden absolute top-full left-0 right-0 bg-primary-light dark:bg-primary-dark shadow-lg transform transition-all duration-300 ease-in-out ${menuOpen
-                            ? "opacity-100 translate-y-0 pointer-events-auto"
-                            : "opacity-0 -translate-y-2 pointer-events-none"
+                        ? "opacity-100 translate-y-0 pointer-events-auto"
+                        : "opacity-0 -translate-y-2 pointer-events-none"
                         }`}
                 >
                     <nav className="flex flex-col gap-1 px-4 lg:px-8 py-4 max-w-5xl mx-auto animate-slide-in">
