@@ -2,18 +2,18 @@ import React, { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Phaser from "phaser";
 
-import brick from "../../assets/BrickTileset/brick.png";
-import brickBlack from "../../assets/BrickTileset/brickBlack.png";
-import womenMc from "../../assets/Characters/womenMc.png";
-import enemy from "../../assets/Characters/enemy.png";
+import brick from "../../assets/BrickTileset/brick.png"; // 16x16
+import brickBlack from "../../assets/BrickTileset/brickBlack.png"; // 16x16
+import womenMc from "../../assets/Characters/womenMc.png"; // Sprite sheet: 528x328, 8 frames per direction, 4 directions (down, left, right, up)
+import enemy from "../../assets/Characters/enemy.png"; // Sprite sheet: 528x328, 8 frames per direction, 4 directions (down, left, right, up)
 
 const MazeRunner = () => {
     const gameParentRef = useRef(null);
     const navigate = useNavigate();
 
     const playerConfig = {
-        speed: 100,
-        frameRate: 10,
+        speed: 100, // Movement speed in pixels/sec the lower the slower
+        frameRate: 10, // This controls speed of animation the lower the slower it animate
         keys: {
             left: "A",
             right: "D",
@@ -351,7 +351,7 @@ const MazeRunner = () => {
             update() {
                 if (!this.player || !this.keys) return;
 
-                // ✅ Allow debug toggle even when game is over
+                // Allow debug toggle even when game is over
                 if (Phaser.Input.Keyboard.JustDown(this.keyI)) {
                     this.debugMode = !this.debugMode;
                     this.updateDebugOverlay();
@@ -362,7 +362,7 @@ const MazeRunner = () => {
                         this.player.body.setVelocity(0, 0);
                         this.player.anims.stop();
                     }
-                    // ✅ Still render debug overlay if enabled
+                    //  Still render debug overlay if enabled
                     if (this.debugMode) {
                         this.updateDebugOverlay();
                     }
