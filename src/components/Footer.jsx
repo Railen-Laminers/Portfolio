@@ -110,7 +110,7 @@ function Footer() {
                     {/* Copyright and Info */}
                     <div className="text-center">
                         <p className="text-sm text-secondary-light/80 dark:text-secondary-dark/80 transition-colors duration-300">
-                            © {new Date().getFullYear()} Your Name. All rights reserved.
+                            © {new Date().getFullYear()} All rights reserved.
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                             Built with React & Tailwind CSS • Crafted with ❤️

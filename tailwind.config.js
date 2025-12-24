@@ -1,4 +1,4 @@
-/** @type {import('tailwindcss').Config} */
+// tailwind.config.js
 export default {
   content: [
     "./index.html",
@@ -21,6 +21,7 @@ export default {
           dark: "#fb923c",
         },
       },
+
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',
         'slide-in': 'slideIn 0.3s ease-out',
@@ -28,7 +29,9 @@ export default {
         'pulse-slow': 'pulse 3s infinite',
         'bounce-slow': 'bounce 2s infinite',
         'float': 'float 3s ease-in-out infinite',
+        'blur-pulse': 'blurPulse 2s ease-in-out',
       },
+
       keyframes: {
         fadeIn: {
           '0%': { opacity: '0' },
@@ -46,11 +49,12 @@ export default {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-10px)' },
         },
-      },
-      transitionProperty: {
-        'height': 'height',
-        'max-height': 'max-height',
-        'spacing': 'margin, padding',
+
+        blurPulse: {
+          '0%': { filter: 'blur(0px)' },
+          '50%': { filter: 'blur(6px)' },
+          '100%': { filter: 'blur(0px)' },
+        },
       },
     },
   },
