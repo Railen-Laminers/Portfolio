@@ -89,19 +89,20 @@ function Footer() {
                         <div className="flex flex-wrap justify-center gap-4 md:gap-6 mb-8">
                             {contacts.map((contact, index) => (
                                 <a
-                                    key={contact.link} // ✅ FIXED KEY
-                                    href={contact.link}z
+                                    key={contact.link}
+                                    href={contact.link}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className={`flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full
-                    ${contact.bg} ${contact.color}
-                    transition-all duration-300 hover:scale-110 ${contact.hover} animate-scale-up group`}
+    ${contact.bg} ${contact.color}
+    transition-all duration-300 hover:scale-110 ${contact.hover} animate-scale-up group`}
                                     style={{ animationDelay: `${index * 0.1}s` }}
                                 >
                                     <span className="text-xl md:text-2xl transition-transform duration-300 group-hover:scale-125">
                                         {contact.icon}
                                     </span>
                                 </a>
+
                             ))}
                         </div>
                     </div>

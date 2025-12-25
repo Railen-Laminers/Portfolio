@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import DateComponent from "../components/DateComponent";
 import maze from "../assets/SgamesImages/maze.png";
+import uma from "../assets/SgamesImages/uma.png";
 import ams from "../assets/SwebImages/ams.png";
 
 const projects = [
@@ -18,6 +19,13 @@ const projects = [
         category: "games",
         image: maze,
         link: "/maze-runner",
+    },
+    {
+        name: "Uma",
+        date: "2025-12-25",
+        category: "games",
+        image: uma,
+        link: "/Uma",
     },
 ];
 
