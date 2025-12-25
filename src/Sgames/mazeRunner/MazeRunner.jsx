@@ -12,8 +12,8 @@ const MazeRunner = () => {
     const navigate = useNavigate();
 
     const playerConfig = {
-        speed: 100, // Movement speed in pixels/sec the lower the slower
-        frameRate: 10, // This controls speed of animation the lower the slower it animate
+        speed: 100,
+        frameRate: 10,
         keys: {
             left: "A",
             right: "D",
@@ -192,6 +192,9 @@ const MazeRunner = () => {
                 const panelColor = isDark ? 0x071024 : 0xf2f4f7;
                 const panelAlpha = isDark ? 0.35 : 0.8;
                 const textPrimary = isDark ? "#e6f9ff" : "#06111a";
+                const menuBtnBg = isDark ? "#1e293b" : "#4a5568";
+                const menuBtnHover = isDark ? "#334155" : "#6b7280";
+                const menuBtnText = isDark ? "#f1f5f9" : "#ffffff";
 
                 this.uiPanel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, panelColor)
                     .setAlpha(panelAlpha)
@@ -204,16 +207,59 @@ const MazeRunner = () => {
                     .setScrollFactor(0)
                     .setDepth(899);
 
-                this.instructionText = this.add.text(panelX + 10, panelY + 20,
-                    `Move with\n${Object.values(playerConfig.keys).join(' / ')}\n\nPress [I] for debug`, {
-                    font: '16px Arial',
-                    fill: textPrimary,
-                    align: 'left'
-                })
+                // === MENU BUTTON (now at the top) ===
+                this.menuButton = this.add.text(
+                    panelX + panelWidth / 2,
+                    panelY + 25,
+                    "☰ Menu",
+                    {
+                        font: "18px Arial",
+                        fill: menuBtnText,
+                        backgroundColor: menuBtnBg,
+                        padding: { x: 16, y: 8 },
+                    })
+                    .setOrigin(0.5, 0.5)
+                    .setScrollFactor(0)
+                    .setDepth(910)
+                    .setInteractive({ useHandCursor: true })
+                    .on("pointerdown", () => {
+                        this.scene.start("MainMenu");
+                    })
+                    .on("pointerover", () => {
+                        this.tweens.add({
+                            targets: this.menuButton,
+                            scaleX: 1.08,
+                            scaleY: 1.08,
+                            duration: 150,
+                            ease: "Power2"
+                        });
+                        this.menuButton.setBackgroundColor(menuBtnHover);
+                    })
+                    .on("pointerout", () => {
+                        this.tweens.add({
+                            targets: this.menuButton,
+                            scaleX: 1,
+                            scaleY: 1,
+                            duration: 150,
+                            ease: "Power2"
+                        });
+                        this.menuButton.setBackgroundColor(menuBtnBg);
+                    });
+
+                // === INSTRUCTIONS BELOW MENU ===
+                this.instructionText = this.add.text(
+                    panelX + 10,
+                    panelY + 65,
+                    `Move with\n${Object.values(playerConfig.keys).join(' / ')}\n\nPress [I] for debug`,
+                    {
+                        font: '16px Arial',
+                        fill: textPrimary,
+                        align: 'left'
+                    })
                     .setScrollFactor(0)
                     .setDepth(910);
 
-                this.levelText = this.add.text(panelX + 10, panelY + 120, `Level: ${this.level}`, {
+                this.levelText = this.add.text(panelX + 10, panelY + 140, `Level: ${this.level}`, {
                     font: '22px Arial',
                     fill: textPrimary,
                     fontWeight: 'bold'
@@ -221,26 +267,13 @@ const MazeRunner = () => {
                     .setScrollFactor(0)
                     .setDepth(910);
 
-                this.timerText = this.add.text(panelX + 10, panelY + 160, `Time: ${this.timeLeft}`, {
+                this.timerText = this.add.text(panelX + 10, panelY + 180, `Time: ${this.timeLeft}`, {
                     font: '22px Arial',
                     fill: isDark ? "#c6f6d5" : "#024b23",
                     fontWeight: 'bold'
                 })
                     .setScrollFactor(0)
                     .setDepth(910);
-
-                this.menuButton = this.add.text(panelX + panelWidth - 10, panelY + panelHeight - 10, "Menu", {
-                    font: "18px Arial",
-                    fill: isDark ? "#ff9d9d" : "#ff5555",
-                    backgroundColor: isDark ? "#111827" : "#222222",
-                    padding: { x: 12, y: 6 }
-                })
-                    .setOrigin(1, 1)
-                    .setScrollFactor(0)
-                    .setInteractive({ useHandCursor: true })
-                    .on("pointerdown", () => {
-                        this.scene.start("MainMenu");
-                    });
 
                 // Win / Defeat UI
                 const centerX = GAME_WIDTH / 2;
@@ -351,7 +384,6 @@ const MazeRunner = () => {
             update() {
                 if (!this.player || !this.keys) return;
 
-                // Allow debug toggle even when game is over
                 if (Phaser.Input.Keyboard.JustDown(this.keyI)) {
                     this.debugMode = !this.debugMode;
                     this.updateDebugOverlay();
@@ -362,7 +394,6 @@ const MazeRunner = () => {
                         this.player.body.setVelocity(0, 0);
                         this.player.anims.stop();
                     }
-                    //  Still render debug overlay if enabled
                     if (this.debugMode) {
                         this.updateDebugOverlay();
                     }
@@ -498,7 +529,6 @@ const MazeRunner = () => {
             }
 
             updateDebugOverlay() {
-                // Ensure debugGraphics exists
                 if (!this.debugGraphics) {
                     this.debugGraphics = this.add.graphics();
                     this.debugGraphics.setScrollFactor(0);
@@ -507,7 +537,6 @@ const MazeRunner = () => {
                     this.debugGraphics.clear();
                 }
 
-                // Clean up old labels
                 if (this.debugLabels) {
                     this.debugLabels.forEach(l => l.destroy?.());
                 }

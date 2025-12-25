@@ -5,7 +5,7 @@ import {
   FaGithub,
 } from "react-icons/fa";
 import { SiLaravel, SiMysql, SiTailwindcss } from "react-icons/si";
-import profile from "../assets/profile.jpg"
+import profile from "../assets/profile.jpg";
 
 function About() {
   const techStack = [
@@ -24,52 +24,51 @@ function About() {
       className="
         max-w-5xl mx-auto px-4 lg:px-8 py-12
         bg-primary-light dark:bg-primary-dark
-        animate-fade-in
       "
     >
-      <div className="flex flex-col md:flex-row items-start gap-10">
-
+      <div className="flex flex-col md:flex-row items-start md:items-center gap-10">
 
         {/* Profile Card */}
         <div
           className="
-    w-60 h-60 flex flex-col
-    bg-primary-light dark:bg-primary-dark
-     shadow-lg overflow-hidden
-  "
+            w-60 h-60 flex-shrink-0 flex flex-col
+            bg-primary-light dark:bg-primary-dark
+             overflow-hidden
+            animate-fade-left
+          "
+          style={{ animationDelay: "0.1s" }}
         >
-          {/* Avatar – 70% */}
           <div
             className="
-    flex-[7] flex items-center justify-center
-    bg-primary-light/40 dark:bg-primary-dark/40
-    border-2 border-accent-light/40 dark:border-accent-dark/40
-    rounded-md
-    rotate-45
-    hover:animate-blur-pulse
-    relative overflow-hidden
-  "
+              flex-[7] flex items-center justify-center
+              rounded-md
+              rotate-45
+              hover:animate-blur-pulse
+              relative overflow-hidden
+              [clip-path:polygon(0_0,100%_0,100%_100%,15%_100%,0_85%)]
+            "
           >
-
             <img
               src={profile}
               alt="Railen Cype Laminero"
-              className="w-full h-full object-cover -rotate-45"
+              className="
+                w-full h-full object-cover -rotate-45
+                border-2 border-accent-light dark:border-accent-dark rounded-md
+              "
             />
-
-            {/* Accent glow */}
-            <span className="absolute inset-0 rounded-md blur-sm bg-accent-light/10 dark:bg-accent-dark/10"></span>
           </div>
 
           {/* Name – 30% */}
           <div className="flex-[3] flex items-center justify-center p-1 text-xs text-primary-dark dark:text-primary-light">
-            <p className="font-bold text-center">Railen Cype Laminero</p>
+            <p className="font-bold text-center">RAILEN CYPE LAMINERO</p>
           </div>
         </div>
 
-
         {/* Content */}
-        <div className="animate-slide-in" style={{ animationDelay: "0.1s" }}>
+        <div
+          className="flex-1 animate-fade-right"
+          style={{ animationDelay: "0.2s" }}
+        >
           <h3 className="text-2xl font-semibold mb-2 text-secondary-light dark:text-secondary-dark">
             Profile
           </h3>
@@ -89,25 +88,24 @@ function About() {
               <div
                 key={index}
                 className="
-                  relative w-10 h-10 flex items-center justify-center
-                  bg-primary-light/40 dark:bg-primary-dark/40
-                  border-2 border-accent-light/40 dark:border-accent-dark/40
-                  rounded-md rotate-45
-                  hover:rotate-0 hover:scale-110
-                  transition-all duration-300 animate-fade-in
-                "
-                style={{ animationDelay: `${index * 0.1}s` }}
+        relative w-10 h-10 flex items-center justify-center
+        bg-primary-light/40 dark:bg-primary-dark/40
+        border-2 border-accent-light/40 dark:border-accent-dark/40
+        rounded-md rotate-45
+        hover:rotate-0 hover:scale-110
+        transition-all duration-300
+        animate-fade-in
+      "
+                style={{ animationDelay: `${0.3 + index * 0.1}s` }}
               >
-                {/* Icon */}
                 <div className={`-rotate-45 text-lg ${tech.color}`}>
                   {tech.icon}
                 </div>
-
-                {/* Accent glow */}
                 <span className="absolute inset-0 rounded-md blur-sm bg-accent-light/10 dark:bg-accent-dark/10"></span>
               </div>
             ))}
           </div>
+
         </div>
       </div>
     </section>
