@@ -1,11 +1,16 @@
+// src/components/MazeRunner/MazeRunner.js
 import React, { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Phaser from "phaser";
 
-import brick from "../../assets/BrickTileset/brick.png"; // 16x16
-import brickBlack from "../../assets/BrickTileset/brickBlack.png"; // 16x16
-import womenMc from "../../assets/Characters/womenMc.png"; // Sprite sheet: 528x328, 8 frames per direction, 4 directions (down, left, right, up)
-import enemy from "../../assets/Characters/enemy.png"; // Sprite sheet: 528x328, 8 frames per direction, 4 directions (down, left, right, up)
+import brick from "../../assets/BrickTileset/brick.png";
+import brickBlack from "../../assets/BrickTileset/brickBlack.png";
+import womenMc from "../../assets/Characters/womenMc.png";
+import enemy from "../../assets/Characters/enemy.png";
+
+// ✅ IMPORT EXTRACTED SCENES & DEBUG UTILS
+import { MainMenuScene } from "./MainMenuScene";
+import { createDebugOverlay, updateDebugOverlay, cleanupDebugOverlay } from "./DebugOverlay";
 
 const MazeRunner = () => {
     const gameParentRef = useRef(null);
@@ -14,12 +19,7 @@ const MazeRunner = () => {
     const playerConfig = {
         speed: 100,
         frameRate: 10,
-        keys: {
-            left: "A",
-            right: "D",
-            up: "W",
-            down: "S"
-        }
+        keys: { left: "A", right: "D", up: "W", down: "S" }
     };
 
     useEffect(() => {
@@ -30,140 +30,16 @@ const MazeRunner = () => {
         const UI_PANEL_WIDTH = 200;
         const MAZE_WIDTH = GAME_WIDTH - UI_PANEL_WIDTH;
 
-        // === SHARED DARK MODE READER (same as Uma) ===
-        function readDarkMode() {
-            try {
-                const stored = localStorage.getItem("darkMode");
-                if (stored !== null) return stored === "true";
-            } catch { }
-            return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-        }
-
-        // === SHARED BACKGROUND DRAWER (IDENTICAL TO UMA) ===
-        function drawMenuBackground(graphics, isDark, width, height) {
-            const color = isDark ? 0x1f2937 : 0xbfbfbf;
-            const TILE_BG = 40;
-            for (let y = 0; y < height; y += TILE_BG) {
-                for (let x = 0; x < width; x += TILE_BG) {
-                    const alpha = Math.random() * 0.1 + 0.05;
-                    graphics.fillStyle(color, alpha);
-                    graphics.fillRect(x, y, TILE_BG - 2, TILE_BG - 2);
-                }
-            }
-        }
-
-        class MainMenu extends Phaser.Scene {
-            constructor() {
-                super({ key: "MainMenu" });
-            }
-
-            create() {
-                const isDark = readDarkMode();
-                this.bgGraphics = this.add.graphics();
-                drawMenuBackground(this.bgGraphics, isDark, this.cameras.main.width, this.cameras.main.height);
-
-                const textColor = isDark ? "#e5e7eb" : "#111111";
-                const btnBg = isDark ? "#111827" : "#222222";
-                const btnColor = isDark ? "#ff9d9d" : "#ff5555";
-
-                const centerX = this.cameras.main.centerX;
-                let startY = 180;
-                const spacing = 75;
-
-                // Title
-                this.add.text(centerX, 80, "Maze Runner", {
-                    font: "48px Arial",
-                    fill: textColor,
-                    stroke: isDark ? "#ff9d9d" : "#ff5555",
-                    strokeThickness: 4
-                }).setOrigin(0.5);
-
-                // Subtitle
-                this.add.text(centerX, 130, "Women's Escape", {
-                    font: "20px Arial",
-                    fill: isDark ? "#c7d2fe" : "#6666ff",
-                    fontStyle: "italic"
-                }).setOrigin(0.5);
-
-                const addButton = (label, callback) => {
-                    const btn = this.add.text(centerX, startY, label, {
-                        font: "32px Arial",
-                        fill: btnColor,
-                        backgroundColor: btnBg,
-                        padding: { x: 30, y: 15 },
-                        stroke: isDark ? "#ff6b6b" : "#ff3333",
-                        strokeThickness: 2
-                    })
-                        .setOrigin(0.5)
-                        .setInteractive({ useHandCursor: true })
-                        .on("pointerdown", callback)
-                        .on("pointerover", () => {
-                            btn.setScale(1.1);
-                            btn.setBackgroundColor(isDark ? "#1f2937" : "#333333");
-                        })
-                        .on("pointerout", () => {
-                            btn.setScale(1);
-                            btn.setBackgroundColor(btnBg);
-                        });
-                    startY += spacing;
-                    return btn;
-                };
-
-                addButton("Start Game", () => this.scene.start("MazeRunnerScene", { level: 1 }));
-                addButton("Controls", () => this.showControls());
-                addButton("Credits", () => this.showCredits());
-                addButton("Exit", () => navigate("/"));
-
-                // Footer
-                this.add.text(centerX, 520, "The Escape Awaits!", {
-                    font: "16px Arial",
-                    fill: isDark ? "#94a3b8" : "#666666"
-                }).setOrigin(0.5);
-            }
-
-            showControls() {
-                const controlsText =
-                    "CONTROLS\n" +
-                    "══════════\n" +
-                    "W - Move Up\n" +
-                    "A - Move Left\n" +
-                    "S - Move Down\n" +
-                    "D - Move Right\n" +
-                    "\nTips:\n" +
-                    "• Reach the green finish zone\n" +
-                    "• Avoid enemies after moving far\n" +
-                    "• Press I to toggle debug mode";
-                alert(controlsText);
-            }
-
-            showCredits() {
-                const creditsText =
-                    "CREDITS\n" +
-                    "══════════\n" +
-                    "Character Sprite: MemaoCharacterFantasySpritePack by Galv\n" +
-                    "Tile Assets: DeadlyEssence / Kailyn M.\n" +
-                    "Game Design: Railen";
-                alert(creditsText);
-            }
-
-            update() {
-                if (this.bgGraphics) {
-                    this.bgGraphics.x -= 0.5;
-                    if (this.bgGraphics.x < -50) this.bgGraphics.x = 0;
-                }
-            }
-        }
-
         class MazeRunnerScene extends Phaser.Scene {
             constructor() {
                 super({ key: "MazeRunnerScene" });
             }
 
             init(data) {
-                this.level = data && data.level ? data.level : 1;
+                this.level = data?.level || 1;
             }
 
-            preload() { // unchanged
+            preload() {
                 this.load.image("brick", brick);
                 this.load.image("brickBlack", brickBlack);
                 this.load.spritesheet("womenMc", womenMc, { frameWidth: 66, frameHeight: 82 });
@@ -171,7 +47,9 @@ const MazeRunner = () => {
             }
 
             create() {
-                // ✅ ESC KEY TO MENU
+                // ✅ EXIT CALLBACK FOR MAIN MENU "Exit" BUTTON
+                this.scene.systems.game.exitCallback = () => navigate("/");
+
                 this.input.keyboard.on("keydown-ESC", () => {
                     this.scene.start("MainMenu");
                 });
@@ -197,7 +75,7 @@ const MazeRunner = () => {
                 this.mazeGrid = maze;
 
                 this.walls = [];
-                const isDark = readDarkMode();
+                const isDark = this.readDarkMode();
                 this.cameras.main.setBackgroundColor(isDark ? 0x0f172a : 0xffffff);
                 this.cameras.main.setBounds(0, 0, MAZE_WIDTH, GAME_HEIGHT);
 
@@ -220,7 +98,7 @@ const MazeRunner = () => {
                 this.finish = this.add.rectangle(finishPos.col * TILE + TILE / 2, finishPos.row * TILE + TILE / 2, TILE * 0.8, TILE * 0.8, isDark ? 0x16a34a : 0x37c84f).setOrigin(0.5);
                 this.physics.add.existing(this.finish, true);
 
-                // === ANIMATIONS ===
+                // Animations
                 this.anims.create({ key: "walk-down", frames: this.anims.generateFrameNumbers("womenMc", { start: 0, end: 7 }), frameRate: playerConfig.frameRate, repeat: -1 });
                 this.anims.create({ key: "walk-left", frames: this.anims.generateFrameNumbers("womenMc", { start: 8, end: 15 }), frameRate: playerConfig.frameRate, repeat: -1 });
                 this.anims.create({ key: "walk-right", frames: this.anims.generateFrameNumbers("womenMc", { start: 16, end: 23 }), frameRate: playerConfig.frameRate, repeat: -1 });
@@ -340,7 +218,6 @@ const MazeRunner = () => {
                     .setScrollFactor(0)
                     .setDepth(910);
 
-                // Win / Defeat UI
                 const centerX = GAME_WIDTH / 2;
                 const centerY = GAME_HEIGHT / 2;
 
@@ -416,7 +293,14 @@ const MazeRunner = () => {
                 this.events.on('destroy', this._onDestroy, this);
             }
 
-            // === ALL EXISTING METHODS BELOW UNCHANGED ===
+            readDarkMode() {
+                try {
+                    const stored = localStorage.getItem("darkMode");
+                    if (stored !== null) return stored === "true";
+                } catch { }
+                return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+            }
+
             startTimerWarning() {
                 if (this.timerWarningTween) return;
                 try {
@@ -437,7 +321,7 @@ const MazeRunner = () => {
                     if (this.timerWarningTween) {
                         this.timerWarningTween.stop();
                         this.timerWarningTween = null;
-                        const isDark = readDarkMode();
+                        const isDark = this.readDarkMode();
                         this.timerText.setStyle({
                             fill: isDark ? "#c6f6d5" : "#024b23",
                             stroke: isDark ? "#032a1f" : "#ffffff",
@@ -453,7 +337,7 @@ const MazeRunner = () => {
 
                 if (Phaser.Input.Keyboard.JustDown(this.keyI)) {
                     this.debugMode = !this.debugMode;
-                    this.updateDebugOverlay();
+                    updateDebugOverlay(this);
                 }
 
                 if (this.win || this.gameOver) {
@@ -462,7 +346,7 @@ const MazeRunner = () => {
                         this.player.anims.stop();
                     }
                     if (this.debugMode) {
-                        this.updateDebugOverlay();
+                        updateDebugOverlay(this);
                     }
                     return;
                 }
@@ -498,7 +382,7 @@ const MazeRunner = () => {
                     }
                 }
 
-                if (this.debugMode) this.updateDebugOverlay();
+                if (this.debugMode) updateDebugOverlay(this);
             }
 
             spawnEnemyAtStart() {
@@ -595,67 +479,8 @@ const MazeRunner = () => {
                 return { row, col };
             }
 
-            updateDebugOverlay() {
-                if (!this.debugGraphics) {
-                    this.debugGraphics = this.add.graphics();
-                    this.debugGraphics.setScrollFactor(0);
-                    this.debugGraphics.setDepth(1000);
-                } else {
-                    this.debugGraphics.clear();
-                }
-
-                if (this.debugLabels) {
-                    this.debugLabels.forEach(l => l.destroy?.());
-                }
-                this.debugLabels = [];
-
-                if (!this.debugMode) {
-                    return;
-                }
-
-                const textStyle = { font: "10px monospace", fill: "#ffff00" };
-                const drawDebugFor = (obj, label) => {
-                    const bounds = obj.getBounds();
-                    this.debugGraphics.lineStyle(1, 0x00ffff, 0.8);
-                    this.debugGraphics.strokeRectShape(bounds);
-                    const text = this.add.text(bounds.x, bounds.y - 15, `${label}: (${Math.round(obj.x)}, ${Math.round(obj.y)})`, textStyle)
-                        .setScrollFactor(0)
-                        .setDepth(1000);
-                    this.debugLabels.push(text);
-                };
-
-                drawDebugFor(this.player, "Player");
-                drawDebugFor(this.finish, "Finish");
-                if (this.enemy) drawDebugFor(this.enemy, "Enemy");
-
-                const maxWallLabels = 5;
-                this.walls.forEach((wall, i) => {
-                    const bounds = wall.getBounds();
-                    this.debugGraphics.lineStyle(1, 0xff00ff, 0.6);
-                    this.debugGraphics.strokeRectShape(bounds);
-                    if (i < maxWallLabels) {
-                        const wallText = this.add.text(bounds.x, bounds.y - 12, `Wall ${i}`, { font: "8px monospace", fill: "#ff00ff" })
-                            .setScrollFactor(0)
-                            .setDepth(1000);
-                        this.debugLabels.push(wallText);
-                    }
-                });
-            }
-
             _onShutdown() {
-                try {
-                    if (this.debugGraphics) {
-                        this.debugGraphics.destroy();
-                        this.debugGraphics = null;
-                    }
-                } catch (e) { }
-
-                if (this.debugLabels) {
-                    this.debugLabels.forEach(l => {
-                        try { l.destroy(); } catch (e) { }
-                    });
-                    this.debugLabels = [];
-                }
+                cleanupDebugOverlay(this);
 
                 try { this.stopTimerWarning(); } catch (e) { }
 
@@ -774,7 +599,7 @@ const MazeRunner = () => {
             height: GAME_HEIGHT,
             backgroundColor: readDarkMode() ? 0x0f172a : 0xffffff,
             physics: { default: "arcade", arcade: { gravity: { y: 0 }, debug: false } },
-            scene: [MainMenu, MazeRunnerScene],
+            scene: [MainMenuScene, MazeRunnerScene],
         };
 
         game = new Phaser.Game(config);
@@ -785,6 +610,14 @@ const MazeRunner = () => {
             }
         };
     }, [navigate]);
+
+    function readDarkMode() {
+        try {
+            const stored = localStorage.getItem("darkMode");
+            if (stored !== null) return stored === "true";
+        } catch { }
+        return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }
 
     return (
         <div style={{ width: "100%", height: "100%", display: "flex", justifyContent: "center", alignItems: "center" }}>

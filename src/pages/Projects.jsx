@@ -21,7 +21,7 @@ const projects = [
         link: "/maze-runner",
     },
     {
-        name: "Uma",
+        name: "Uma (Unfinished)",
         date: "2025-12-25",
         category: "games",
         image: uma,
