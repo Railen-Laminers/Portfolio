@@ -4,14 +4,22 @@ import DateComponent from "../components/DateComponent";
 import maze from "../assets/SgamesImages/maze.png";
 import uma from "../assets/SgamesImages/uma.png";
 import ams from "../assets/SwebImages/ams.png";
+import youtubeDownloader from "../assets/SwebImages/youtubeDownloader.png";
 
 const projects = [
     {
         name: "Apartment Management System",
-        date: "2024-01-15",
+        date: "2025-11-15",
         category: "Web",
         image: ams,
         link: "https://github.com/Railen-Laminers/Apartment-Management.git",
+    },
+    {
+        name: "Youtube Downloader",
+        date: "2025-12-26",
+        category: "Web",
+        image: youtubeDownloader,
+        link: "https://github.com/Railen-Laminers/YouTube_Downloader.git",
     },
     {
         name: "Maze Runner Game",
