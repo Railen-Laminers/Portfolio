@@ -30,28 +30,28 @@ function Footer() {
     const contacts = [
         {
             icon: <FaFacebook />,
-            link: "https://facebook.com/yourprofile",
+            link: "https://www.facebook.com/share/1KHPY1vVw1/",
             color: "text-blue-600 dark:text-blue-400",
             bg: "bg-blue-500/10 dark:bg-blue-400/10",
             hover: "hover:bg-blue-500/20 dark:hover:bg-blue-400/20",
         },
         {
             icon: <FaEnvelope />,
-            link: "mailto:your.email@example.com",
+            link: "mailto:railen.laminero@gmail.com",
             color: "text-red-600 dark:text-red-400",
             bg: "bg-red-500/10 dark:bg-red-400/10",
             hover: "hover:bg-red-500/20 dark:hover:bg-red-400/20",
         },
         {
             icon: <FaTelegramPlane />,
-            link: "https://t.me/yourusername",
+            link: "https://t.me/Railen_Laminero",
             color: "text-blue-500 dark:text-blue-300",
             bg: "bg-blue-500/10 dark:bg-blue-300/10",
             hover: "hover:bg-blue-500/20 dark:hover:bg-blue-300/20",
         },
         {
             icon: <FaGithub />,
-            link: "https://github.com/yourusername",
+            link: "https://github.com/Railen-Laminers",
             color: "text-gray-700 dark:text-gray-300",
             bg: "bg-gray-500/10 dark:bg-gray-700/10",
             hover: "hover:bg-gray-500/20 dark:hover:bg-gray-700/20",

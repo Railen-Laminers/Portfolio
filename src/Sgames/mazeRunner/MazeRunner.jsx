@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Phaser from "phaser";
 
@@ -17,6 +17,8 @@ import { createDebugOverlay, updateDebugOverlay, cleanupDebugOverlay } from "./D
 const MazeRunner = () => {
     const gameParentRef = useRef(null);
     const navigate = useNavigate();
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+    const [isPortrait, setIsPortrait] = useState(window.innerHeight > window.innerWidth);
 
     const playerConfig = {
         speed: 100,
@@ -24,13 +26,61 @@ const MazeRunner = () => {
         keys: { left: "A", right: "D", up: "W", down: "S" }
     };
 
+    // Handle resize and orientation
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth <= 768);
+            setIsPortrait(window.innerHeight > window.innerWidth);
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     useEffect(() => {
         let game = null;
 
-        const GAME_WIDTH = 960;
-        const GAME_HEIGHT = 640;
-        const UI_PANEL_WIDTH = 200;
-        const MAZE_WIDTH = GAME_WIDTH - UI_PANEL_WIDTH;
+        // Dynamic game dimensions based on screen size
+        const getGameDimensions = () => {
+            const isMobile = window.innerWidth <= 768;
+            const isPortrait = window.innerHeight > window.innerWidth;
+
+            if (isMobile) {
+                if (isPortrait) {
+                    // Mobile portrait
+                    return {
+                        width: Math.min(400, window.innerWidth - 20),
+                        height: Math.min(600, window.innerHeight - 100),
+                        uiPanelWidth: 0, // No side panel on mobile
+                        uiPanelPosition: 'bottom' // UI at bottom
+                    };
+                } else {
+                    // Mobile landscape
+                    return {
+                        width: Math.min(700, window.innerWidth - 20),
+                        height: Math.min(400, window.innerHeight - 20),
+                        uiPanelWidth: 150,
+                        uiPanelPosition: 'right'
+                    };
+                }
+            } else {
+                // Desktop
+                return {
+                    width: 960,
+                    height: 640,
+                    uiPanelWidth: 200,
+                    uiPanelPosition: 'right'
+                };
+            }
+        };
+
+        const dimensions = getGameDimensions();
+        const GAME_WIDTH = dimensions.width;
+        const GAME_HEIGHT = dimensions.height;
+        const UI_PANEL_WIDTH = dimensions.uiPanelWidth;
+        const UI_PANEL_POSITION = dimensions.uiPanelPosition;
+        const MAZE_WIDTH = UI_PANEL_POSITION === 'right' ? GAME_WIDTH - UI_PANEL_WIDTH : GAME_WIDTH;
+        const MAZE_HEIGHT = UI_PANEL_POSITION === 'bottom' ? GAME_HEIGHT - 100 : GAME_HEIGHT;
 
         class MazeRunnerScene extends Phaser.Scene {
             constructor() {
@@ -39,6 +89,16 @@ const MazeRunner = () => {
 
             init(data) {
                 this.level = data?.level || 1;
+                this.joystick = {
+                    active: false,
+                    x: 0,
+                    y: 0,
+                    vector: { x: 0, y: 0 },
+                    base: null,
+                    thumb: null,
+                    radius: 0,
+                    touchId: null
+                };
             }
 
             preload() {
@@ -49,7 +109,9 @@ const MazeRunner = () => {
             }
 
             create() {
-                // ❌ REMOVED: exitCallback is now set globally on game instance
+                // Check if we're on mobile
+                this.isMobile = this.game.device.os.android || this.game.device.os.iOS || window.innerWidth <= 768;
+                this.isPortrait = this.scale.height > this.scale.width;
 
                 this.input.keyboard.on("keydown-ESC", () => {
                     this.scene.start("MainMenu");
@@ -58,13 +120,26 @@ const MazeRunner = () => {
                 this.win = false;
                 this.gameOver = false;
 
-                const FIXED_CELLS_X = 11;
-                const FIXED_CELLS_Y = 9;
+                // Adjust maze size based on screen
+                let FIXED_CELLS_X, FIXED_CELLS_Y;
+                if (this.isMobile) {
+                    if (this.isPortrait) {
+                        FIXED_CELLS_X = 7;  // Smaller maze for mobile portrait
+                        FIXED_CELLS_Y = 9;
+                    } else {
+                        FIXED_CELLS_X = 9;  // Slightly smaller for mobile landscape
+                        FIXED_CELLS_Y = 7;
+                    }
+                } else {
+                    FIXED_CELLS_X = 11;
+                    FIXED_CELLS_Y = 9;
+                }
+
                 const rows = FIXED_CELLS_Y * 2 + 1;
                 const cols = FIXED_CELLS_X * 2 + 1;
 
                 const maxTileW = Math.floor(MAZE_WIDTH / cols);
-                const maxTileH = Math.floor(GAME_HEIGHT / rows);
+                const maxTileH = Math.floor(MAZE_HEIGHT / rows);
                 const TILE = Math.max(12, Math.min(36, Math.min(maxTileW, maxTileH)));
                 this.TILE = TILE;
 
@@ -78,7 +153,7 @@ const MazeRunner = () => {
                 this.walls = [];
                 const isDark = this.readDarkMode();
                 this.cameras.main.setBackgroundColor(isDark ? 0x0f172a : 0xffffff);
-                this.cameras.main.setBounds(0, 0, MAZE_WIDTH, GAME_HEIGHT);
+                this.cameras.main.setBounds(0, 0, MAZE_WIDTH, MAZE_HEIGHT);
 
                 for (let r = 0; r < maze.length; r++) {
                     for (let c = 0; c < maze[0].length; c++) {
@@ -127,12 +202,8 @@ const MazeRunner = () => {
                 this.keys = this.input.keyboard.addKeys(playerConfig.keys);
                 this.keyI = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.I);
 
-                // --- RIGHT-SIDE UI PANEL ---
-                const panelX = MAZE_WIDTH + 10;
-                const panelY = 20;
-                const panelWidth = UI_PANEL_WIDTH - 20;
-                const panelHeight = GAME_HEIGHT - 40;
-
+                // --- DYNAMIC UI PANEL BASED ON SCREEN SIZE ---
+                let panelX, panelY, panelWidth, panelHeight;
                 const panelColor = isDark ? 0x071024 : 0xf2f4f7;
                 const panelAlpha = isDark ? 0.35 : 0.8;
                 const textPrimary = isDark ? "#e6f9ff" : "#06111a";
@@ -140,93 +211,159 @@ const MazeRunner = () => {
                 const menuBtnHover = isDark ? "#334155" : "#6b7280";
                 const menuBtnText = isDark ? "#f1f5f9" : "#ffffff";
 
-                this.uiPanel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, panelColor)
-                    .setAlpha(panelAlpha)
-                    .setOrigin(0, 0)
-                    .setScrollFactor(0)
-                    .setDepth(900);
+                if (UI_PANEL_POSITION === 'right') {
+                    // Side panel
+                    panelX = MAZE_WIDTH + 10;
+                    panelY = 20;
+                    panelWidth = UI_PANEL_WIDTH - 20;
+                    panelHeight = GAME_HEIGHT - 40;
 
-                this.add.rectangle(panelX - 2, panelY, 2, panelHeight, isDark ? 0x2d3748 : 0xcccccc)
-                    .setOrigin(0, 0)
-                    .setScrollFactor(0)
-                    .setDepth(899);
+                    this.uiPanel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, panelColor)
+                        .setAlpha(panelAlpha)
+                        .setOrigin(0, 0)
+                        .setScrollFactor(0)
+                        .setDepth(900);
 
-                // === MENU BUTTON ===
-                this.menuButton = this.add.text(
-                    panelX + panelWidth / 2,
-                    panelY + 25,
-                    "☰ Menu",
-                    {
-                        font: "18px Arial",
-                        fill: menuBtnText,
-                        backgroundColor: menuBtnBg,
-                        padding: { x: 16, y: 8 },
-                    })
-                    .setOrigin(0.5, 0.5)
-                    .setScrollFactor(0)
-                    .setDepth(910)
-                    .setInteractive({ useHandCursor: true })
-                    .on("pointerdown", () => {
-                        this.scene.start("MainMenu");
-                    })
-                    .on("pointerover", () => {
-                        this.tweens.add({
-                            targets: this.menuButton,
-                            scaleX: 1.08,
-                            scaleY: 1.08,
-                            duration: 150,
-                            ease: "Power2"
+                    this.add.rectangle(panelX - 2, panelY, 2, panelHeight, isDark ? 0x2d3748 : 0xcccccc)
+                        .setOrigin(0, 0)
+                        .setScrollFactor(0)
+                        .setDepth(899);
+
+                    // === MENU BUTTON ===
+                    this.menuButton = this.add.text(
+                        panelX + panelWidth / 2,
+                        panelY + 25,
+                        "☰ Menu",
+                        {
+                            font: this.isMobile ? "16px Arial" : "18px Arial",
+                            fill: menuBtnText,
+                            backgroundColor: menuBtnBg,
+                            padding: { x: 16, y: 8 },
+                        })
+                        .setOrigin(0.5, 0.5)
+                        .setScrollFactor(0)
+                        .setDepth(910)
+                        .setInteractive({ useHandCursor: true })
+                        .on("pointerdown", () => {
+                            this.scene.start("MainMenu");
+                        })
+                        .on("pointerover", () => {
+                            this.tweens.add({
+                                targets: this.menuButton,
+                                scaleX: 1.08,
+                                scaleY: 1.08,
+                                duration: 150,
+                                ease: "Power2"
+                            });
+                            this.menuButton.setBackgroundColor(menuBtnHover);
+                        })
+                        .on("pointerout", () => {
+                            this.tweens.add({
+                                targets: this.menuButton,
+                                scaleX: 1,
+                                scaleY: 1,
+                                duration: 150,
+                                ease: "Power2"
+                            });
+                            this.menuButton.setBackgroundColor(menuBtnBg);
                         });
-                        this.menuButton.setBackgroundColor(menuBtnHover);
-                    })
-                    .on("pointerout", () => {
-                        this.tweens.add({
-                            targets: this.menuButton,
-                            scaleX: 1,
-                            scaleY: 1,
-                            duration: 150,
-                            ease: "Power2"
-                        });
-                        this.menuButton.setBackgroundColor(menuBtnBg);
-                    });
 
-                // === INSTRUCTIONS ===
-                this.instructionText = this.add.text(
-                    panelX + 10,
-                    panelY + 65,
-                    `Move with\n${Object.values(playerConfig.keys).join(' / ')}\n\nPress [I] for debug`,
-                    {
+                    // === INSTRUCTIONS ===
+                    const instructionY = this.isMobile ? panelY + 55 : panelY + 65;
+                    this.instructionText = this.add.text(
+                        panelX + 10,
+                        instructionY,
+                        this.isMobile ? `Move with\nWASD` : `Move with\n${Object.values(playerConfig.keys).join(' / ')}\n\nPress [I] for debug`,
+                        {
+                            font: this.isMobile ? '14px Arial' : '16px Arial',
+                            fill: textPrimary,
+                            align: 'left'
+                        })
+                        .setScrollFactor(0)
+                        .setDepth(910);
+
+                    this.levelText = this.add.text(panelX + 10, panelY + (this.isMobile ? 110 : 140), `Level: ${this.level}`, {
+                        font: this.isMobile ? '18px Arial' : '22px Arial',
+                        fill: textPrimary,
+                        fontWeight: 'bold'
+                    })
+                        .setScrollFactor(0)
+                        .setDepth(910);
+
+                    this.timerText = this.add.text(panelX + 10, panelY + (this.isMobile ? 140 : 180), `Time: ${this.timeLeft}`, {
+                        font: this.isMobile ? '18px Arial' : '22px Arial',
+                        fill: isDark ? "#c6f6d5" : "#024b23",
+                        fontWeight: 'bold'
+                    })
+                        .setScrollFactor(0)
+                        .setDepth(910);
+
+                } else if (UI_PANEL_POSITION === 'bottom') {
+                    // Bottom panel for mobile portrait
+                    panelX = 10;
+                    panelY = MAZE_HEIGHT + 10;
+                    panelWidth = GAME_WIDTH - 20;
+                    panelHeight = GAME_HEIGHT - MAZE_HEIGHT - 20;
+
+                    this.uiPanel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, panelColor)
+                        .setAlpha(panelAlpha)
+                        .setOrigin(0, 0)
+                        .setScrollFactor(0)
+                        .setDepth(900);
+
+                    // === MENU BUTTON ===
+                    this.menuButton = this.add.text(
+                        panelX + 80,
+                        panelY + panelHeight / 2,
+                        "☰ Menu",
+                        {
+                            font: "16px Arial",
+                            fill: menuBtnText,
+                            backgroundColor: menuBtnBg,
+                            padding: { x: 12, y: 6 },
+                        })
+                        .setOrigin(0.5, 0.5)
+                        .setScrollFactor(0)
+                        .setDepth(910)
+                        .setInteractive({ useHandCursor: true })
+                        .on("pointerdown", () => {
+                            this.scene.start("MainMenu");
+                        });
+
+                    // === LEVEL & TIMER ===
+                    this.levelText = this.add.text(panelX + panelWidth - 120, panelY + 15, `Level: ${this.level}`, {
                         font: '16px Arial',
                         fill: textPrimary,
-                        align: 'left'
+                        fontWeight: 'bold'
                     })
-                    .setScrollFactor(0)
-                    .setDepth(910);
+                        .setScrollFactor(0)
+                        .setDepth(910);
 
-                this.levelText = this.add.text(panelX + 10, panelY + 140, `Level: ${this.level}`, {
-                    font: '22px Arial',
-                    fill: textPrimary,
-                    fontWeight: 'bold'
+                    this.timerText = this.add.text(panelX + panelWidth - 120, panelY + 40, `Time: ${this.timeLeft}`, {
+                        font: '16px Arial',
+                        fill: isDark ? "#c6f6d5" : "#024b23",
+                        fontWeight: 'bold'
+                    })
+                        .setScrollFactor(0)
+                        .setDepth(910);
+                }
+
+                // === VIRTUAL JOYSTICK FOR MOBILE ===
+                if (this.isMobile) {
+                    this.createVirtualJoystick();
+                }
+
+                const centerX = MAZE_WIDTH / 2;
+                const centerY = MAZE_HEIGHT / 2;
+
+                this.winText = this.add.text(centerX, centerY, "You win!", {
+                    font: this.isMobile ? "36px Arial" : "48px Arial",
+                    fill: isDark ? "#fff59d" : "#ffff66"
                 })
-                    .setScrollFactor(0)
-                    .setDepth(910);
-
-                this.timerText = this.add.text(panelX + 10, panelY + 180, `Time: ${this.timeLeft}`, {
-                    font: '22px Arial',
-                    fill: isDark ? "#c6f6d5" : "#024b23",
-                    fontWeight: 'bold'
-                })
-                    .setScrollFactor(0)
-                    .setDepth(910);
-
-                const centerX = GAME_WIDTH / 2;
-                const centerY = GAME_HEIGHT / 2;
-
-                this.winText = this.add.text(centerX, centerY, "You win!", { font: "48px Arial", fill: isDark ? "#fff59d" : "#ffff66" })
                     .setOrigin(0.5).setDepth(1000).setVisible(false);
 
-                this.retryButton = this.add.text(centerX, centerY + 80, "Retry", {
-                    font: "32px Arial",
+                this.retryButton = this.add.text(centerX, centerY + (this.isMobile ? 60 : 80), "Retry", {
+                    font: this.isMobile ? "24px Arial" : "32px Arial",
                     fill: isDark ? "#ff9d9d" : "#ff5555",
                     backgroundColor: isDark ? "#111827" : "#222222",
                     padding: { x: 20, y: 10 },
@@ -235,8 +372,8 @@ const MazeRunner = () => {
                     .setInteractive({ useHandCursor: true })
                     .on("pointerdown", () => this.scene.restart({ level: this.level }));
 
-                this.nextLevelButton = this.add.text(centerX, centerY + 140, "Next Level", {
-                    font: "28px Arial",
+                this.nextLevelButton = this.add.text(centerX, centerY + (this.isMobile ? 110 : 140), "Next Level", {
+                    font: this.isMobile ? "22px Arial" : "28px Arial",
                     fill: isDark ? "#a7f3d0" : "#00a86b",
                     backgroundColor: isDark ? "#0b1220" : "#e6ffe9",
                     padding: { x: 20, y: 10 },
@@ -248,10 +385,16 @@ const MazeRunner = () => {
                         this.scene.restart({ level: next });
                     });
 
-                this.defeatText = this.add.text(centerX, centerY, "You were caught!", { font: "48px Arial", fill: isDark ? "#ff8b8b" : "#ff3333" })
+                this.defeatText = this.add.text(centerX, centerY, "You were caught!", {
+                    font: this.isMobile ? "36px Arial" : "48px Arial",
+                    fill: isDark ? "#ff8b8b" : "#ff3333"
+                })
                     .setOrigin(0.5).setDepth(1000).setVisible(false);
 
-                this.timeUpText = this.add.text(centerX, centerY, "Time's Up!", { font: "48px Arial", fill: isDark ? "#ff8b8b" : "#ff3333" })
+                this.timeUpText = this.add.text(centerX, centerY, "Time's Up!", {
+                    font: this.isMobile ? "36px Arial" : "48px Arial",
+                    fill: isDark ? "#ff8b8b" : "#ff3333"
+                })
                     .setOrigin(0.5).setDepth(1000).setVisible(false);
 
                 this.enemy = null;
@@ -292,6 +435,151 @@ const MazeRunner = () => {
 
                 this.events.on('shutdown', this._onShutdown, this);
                 this.events.on('destroy', this._onDestroy, this);
+            }
+
+            createVirtualJoystick() {
+                const isDark = this.readDarkMode();
+                const baseColor = isDark ? 0x2d3748 : 0xcccccc;
+                const thumbColor = isDark ? 0x475569 : 0x999999;
+
+                // Calculate joystick position
+                let baseX, baseY;
+                if (this.isPortrait) {
+                    baseX = 80;
+                    baseY = this.cameras.main.height - 120;
+                } else {
+                    baseX = 100;
+                    baseY = this.cameras.main.height - 100;
+                }
+
+                const baseRadius = 50;
+                const thumbRadius = 25;
+
+                // Create joystick base (stationary)
+                this.joystick.base = this.add.circle(baseX, baseY, baseRadius, baseColor, 0.3)
+                    .setStrokeStyle(2, isDark ? 0x475569 : 0x999999)
+                    .setDepth(950)
+                    .setScrollFactor(0);
+
+                // Create joystick thumb (movable)
+                this.joystick.thumb = this.add.circle(baseX, baseY, thumbRadius, thumbColor, 0.5)
+                    .setStrokeStyle(2, isDark ? 0x64748b : 0x777777)
+                    .setDepth(951)
+                    .setScrollFactor(0);
+
+                this.joystick.x = baseX;
+                this.joystick.y = baseY;
+                this.joystick.radius = baseRadius - thumbRadius; // Max movement radius for thumb
+
+                // Store original positions
+                this.joystick.originalX = baseX;
+                this.joystick.originalY = baseY;
+
+                // Set up touch events for the entire game area
+                this.input.on('pointerdown', (pointer) => {
+                    // Only activate if pointer is in the left half of the screen (for joystick area)
+                    if (pointer.x < this.cameras.main.width / 2 ||
+                        (pointer.x > this.joystick.x - baseRadius && pointer.x < this.joystick.x + baseRadius &&
+                            pointer.y > this.joystick.y - baseRadius && pointer.y < this.joystick.y + baseRadius)) {
+
+                        this.joystick.active = true;
+                        this.joystick.touchId = pointer.id;
+
+                        // Move thumb to touch position (clamped within radius)
+                        this.updateJoystickPosition(pointer.x, pointer.y);
+                    }
+                });
+
+                this.input.on('pointermove', (pointer) => {
+                    if (this.joystick.active && pointer.id === this.joystick.touchId) {
+                        this.updateJoystickPosition(pointer.x, pointer.y);
+                    }
+                });
+
+                this.input.on('pointerup', (pointer) => {
+                    if (this.joystick.active && pointer.id === this.joystick.touchId) {
+                        this.resetJoystick();
+                    }
+                });
+
+                // Also handle pointer cancellation (e.g., browser interruption)
+                this.input.on('pointercancel', (pointer) => {
+                    if (this.joystick.active && pointer.id === this.joystick.touchId) {
+                        this.resetJoystick();
+                    }
+                });
+
+                // Add joystick instruction text
+                if (this.isPortrait) {
+                    this.add.text(baseX, baseY - baseRadius - 15, "Joystick", {
+                        font: '12px Arial',
+                        fill: isDark ? '#94a3b8' : '#666666'
+                    })
+                        .setOrigin(0.5)
+                        .setDepth(951)
+                        .setScrollFactor(0);
+                }
+            }
+
+            updateJoystickPosition(touchX, touchY) {
+                if (!this.joystick.active) return;
+
+                const deltaX = touchX - this.joystick.originalX;
+                const deltaY = touchY - this.joystick.originalY;
+
+                // Calculate distance from center
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+                let newThumbX, newThumbY;
+
+                if (distance <= this.joystick.radius) {
+                    // Within bounds, move thumb directly to touch
+                    newThumbX = touchX;
+                    newThumbY = touchY;
+                } else {
+                    // Outside bounds, clamp to max radius
+                    const angle = Math.atan2(deltaY, deltaX);
+                    newThumbX = this.joystick.originalX + Math.cos(angle) * this.joystick.radius;
+                    newThumbY = this.joystick.originalY + Math.sin(angle) * this.joystick.radius;
+                }
+
+                // Update thumb position
+                this.joystick.thumb.x = newThumbX;
+                this.joystick.thumb.y = newThumbY;
+
+                // Calculate normalized vector (-1 to 1)
+                const vecX = (newThumbX - this.joystick.originalX) / this.joystick.radius;
+                const vecY = (newThumbY - this.joystick.originalY) / this.joystick.radius;
+
+                // Update joystick vector
+                this.joystick.vector.x = vecX;
+                this.joystick.vector.y = vecY;
+
+                // Visual feedback - make base slightly brighter when active
+                const isDark = this.readDarkMode();
+                this.joystick.base.fillColor = isDark ? 0x3c4b64 : 0xdddddd;
+                this.joystick.base.fillAlpha = 0.4;
+            }
+
+            resetJoystick() {
+                this.joystick.active = false;
+                this.joystick.touchId = null;
+                this.joystick.vector.x = 0;
+                this.joystick.vector.y = 0;
+
+                // Animate thumb back to center
+                this.tweens.add({
+                    targets: this.joystick.thumb,
+                    x: this.joystick.originalX,
+                    y: this.joystick.originalY,
+                    duration: 150,
+                    ease: 'Power2'
+                });
+
+                // Reset base appearance
+                const isDark = this.readDarkMode();
+                this.joystick.base.fillColor = isDark ? 0x2d3748 : 0xcccccc;
+                this.joystick.base.fillAlpha = 0.3;
             }
 
             readDarkMode() {
@@ -356,23 +644,48 @@ const MazeRunner = () => {
                 const body = this.player.body;
                 let vx = 0, vy = 0;
 
-                if (this.keys.left.isDown) {
-                    vx = -speed;
-                    this.player.anims.play("walk-left", true);
-                } else if (this.keys.right.isDown) {
-                    vx = speed;
-                    this.player.anims.play("walk-right", true);
-                } else if (this.keys.up.isDown) {
-                    vy = -speed;
-                    this.player.anims.play("walk-up", true);
-                } else if (this.keys.down.isDown) {
-                    vy = speed;
-                    this.player.anims.play("walk-down", true);
+                // Check for joystick input first (mobile)
+                if (this.isMobile && this.joystick.active) {
+                    vx = this.joystick.vector.x * speed;
+                    vy = this.joystick.vector.y * speed;
+                }
+                // Then check keyboard controls (desktop or mobile with keyboard)
+                else {
+                    if (this.keys.left.isDown) {
+                        vx = -speed;
+                    } else if (this.keys.right.isDown) {
+                        vx = speed;
+                    }
+
+                    if (this.keys.up.isDown) {
+                        vy = -speed;
+                    } else if (this.keys.down.isDown) {
+                        vy = speed;
+                    }
+                }
+
+                // Set velocity
+                body.setVelocity(vx, vy);
+
+                // Handle animations based on movement direction
+                if (vx !== 0 || vy !== 0) {
+                    // Prioritize horizontal movement for animation
+                    if (Math.abs(vx) > Math.abs(vy)) {
+                        if (vx > 0) {
+                            this.player.anims.play("walk-right", true);
+                        } else {
+                            this.player.anims.play("walk-left", true);
+                        }
+                    } else {
+                        if (vy > 0) {
+                            this.player.anims.play("walk-down", true);
+                        } else if (vy < 0) {
+                            this.player.anims.play("walk-up", true);
+                        }
+                    }
                 } else {
                     this.player.anims.stop();
                 }
-
-                body.setVelocity(vx, vy);
 
                 if (!this.enemySpawned) {
                     const dx = this.player.x - this.playerStartX;
@@ -505,6 +818,12 @@ const MazeRunner = () => {
                 if (this.player?.body) this.player.body.setVelocity(0, 0);
                 this.stopTimerWarning();
                 this.tweens.add({ targets: this.finish, scaleX: 1.15, scaleY: 1.15, yoyo: true, repeat: 4, duration: 150 });
+
+                // Hide joystick on win
+                if (this.isMobile && this.joystick.base) {
+                    this.joystick.base.setVisible(false);
+                    this.joystick.thumb.setVisible(false);
+                }
             }
 
             onDefeat() {
@@ -527,6 +846,12 @@ const MazeRunner = () => {
                 this.winText.setVisible(false);
                 this.defeatText.scale = 1;
                 this.tweens.add({ targets: this.defeatText, scaleX: 1.12, scaleY: 1.12, yoyo: true, repeat: 3, duration: 140 });
+
+                // Hide joystick on defeat
+                if (this.isMobile && this.joystick.base) {
+                    this.joystick.base.setVisible(false);
+                    this.joystick.thumb.setVisible(false);
+                }
             }
 
             onTimeUp() {
@@ -549,6 +874,12 @@ const MazeRunner = () => {
                 this.winText.setVisible(false);
                 this.timeUpText.scale = 1;
                 this.tweens.add({ targets: this.timeUpText, scaleX: 1.12, scaleY: 1.12, yoyo: true, repeat: 3, duration: 140 });
+
+                // Hide joystick on time up
+                if (this.isMobile && this.joystick.base) {
+                    this.joystick.base.setVisible(false);
+                    this.joystick.thumb.setVisible(false);
+                }
             }
         }
 
@@ -601,17 +932,36 @@ const MazeRunner = () => {
             backgroundColor: readDarkMode() ? 0x0f172a : 0xffffff,
             physics: { default: "arcade", arcade: { gravity: { y: 0 }, debug: false } },
             scene: [MainMenuScene, MazeRunnerScene],
+            scale: {
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH,
+                width: GAME_WIDTH,
+                height: GAME_HEIGHT
+            },
+            input: {
+                touch: {
+                    capture: true // Ensure touch events are captured properly
+                }
+            }
         };
 
         game = new Phaser.Game(config);
 
-        // ✅ SET exitCallback IMMEDIATELY AFTER GAME CREATION
+        // Handle window resize
+        const handleResize = () => {
+            if (game) {
+                game.scale.resize(GAME_WIDTH, GAME_HEIGHT);
+            }
+        };
+        window.addEventListener('resize', handleResize);
+
         game.exitCallback = () => navigate("/");
 
         return () => {
             if (game) {
                 try { game.destroy(true); } catch (e) { }
             }
+            window.removeEventListener('resize', handleResize);
         };
     }, [navigate]);
 
@@ -624,8 +974,41 @@ const MazeRunner = () => {
     }
 
     return (
-        <div style={{ width: "100%", height: "100%", display: "flex", justifyContent: "center", alignItems: "center" }}>
-            <div ref={gameParentRef} />
+        <div style={{
+            width: "100%",
+            height: "100vh",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            overflow: "hidden",
+            backgroundColor: readDarkMode() ? "#0f172a" : "#ffffff",
+            position: "relative",
+            touchAction: "none" // Prevent browser touch actions
+        }}>
+            {/* Orientation warning for mobile */}
+            {isMobile && isPortrait && (
+                <div style={{
+                    position: "absolute",
+                    top: 10,
+                    left: 10,
+                    right: 10,
+                    backgroundColor: "#ff9900",
+                    color: "#000",
+                    padding: "10px",
+                    borderRadius: "5px",
+                    fontSize: "14px",
+                    textAlign: "center",
+                    zIndex: 1000,
+                    display: "none" // Optional: uncomment to show orientation warning
+                }}>
+                    Tip: Rotate to landscape for better gameplay
+                </div>
+            )}
+
+            <div ref={gameParentRef} style={{
+                maxWidth: "100%",
+                maxHeight: "100vh",
+            }} />
         </div>
     );
 };
