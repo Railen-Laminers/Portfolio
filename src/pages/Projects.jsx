@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import DateComponent from "../components/DateComponent";
-import maze from "../assets/SgamesImages/maze.png";
-import uma from "../assets/SgamesImages/uma.png";
-import ams from "../assets/SwebImages/ams.png";
-import youtubeDownloader from "../assets/SwebImages/youtubeDownloader.png";
+
+const BASE = import.meta.env.BASE_URL || '/';
+export const maze = `${BASE}assets/SgamesImages/Maze.png`;
+export const uma = `${BASE}assets/SgamesImages/Uma.png`;
+export const ams = `${BASE}assets/SwebImages/Ams.png`;
+export const youtubeDownloader = `${BASE}assets/SwebImages/YoutubeDownloader.png`;
 
 const projects = [
     {

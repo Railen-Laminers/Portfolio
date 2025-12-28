@@ -2,10 +2,13 @@ import React, { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Phaser from "phaser";
 
-import brick from "../../assets/BrickTileset/brick.png";
-import brickBlack from "../../assets/BrickTileset/brickBlack.png";
-import womenMc from "../../assets/Characters/womenMc.png";
-import enemy from "../../assets/Characters/enemy.png";
+const BASE = import.meta.env.BASE_URL || '/';
+
+// MazeRunner assets
+export const brick = `${BASE}assets/BrickTileset/Brick.png`;
+export const brickBlack = `${BASE}assets/BrickTileset/BrickBlack.png`;
+export const womenMc = `${BASE}assets/Characters/WomenMc.png`;
+export const enemy = `${BASE}assets/Characters/Enemy.png`;
 
 // IMPORT EXTRACTED SCENES & DEBUG UTILS
 import { MainMenuScene } from "./MainMenuScene";

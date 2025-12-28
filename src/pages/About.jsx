@@ -5,7 +5,9 @@ import {
   FaGithub,
 } from "react-icons/fa";
 import { SiLaravel, SiMysql, SiTailwindcss } from "react-icons/si";
-import profile from "../assets/profile.jpg";
+
+// Correct profile image path in public/assets/
+const profile = '/assets/Profile.jpg';
 
 function About() {
   const techStack = [
@@ -33,7 +35,7 @@ function About() {
           className="
             w-60 h-60 flex-shrink-0 flex flex-col
             bg-primary-light dark:bg-primary-dark
-             overflow-hidden
+            overflow-hidden
             animate-fade-left
           "
           style={{ animationDelay: "0.1s" }}
@@ -88,14 +90,14 @@ function About() {
               <div
                 key={index}
                 className="
-        relative w-10 h-10 flex items-center justify-center
-        bg-primary-light/40 dark:bg-primary-dark/40
-        border-2 border-accent-light/40 dark:border-accent-dark/40
-        rounded-md rotate-45
-        hover:rotate-0 hover:scale-110
-        transition-all duration-300
-        animate-fade-in
-      "
+                  relative w-10 h-10 flex items-center justify-center
+                  bg-primary-light/40 dark:bg-primary-dark/40
+                  border-2 border-accent-light/40 dark:border-accent-dark/40
+                  rounded-md rotate-45
+                  hover:rotate-0 hover:scale-110
+                  transition-all duration-300
+                  animate-fade-in
+                "
                 style={{ animationDelay: `${0.3 + index * 0.1}s` }}
               >
                 <div className={`-rotate-45 text-lg ${tech.color}`}>

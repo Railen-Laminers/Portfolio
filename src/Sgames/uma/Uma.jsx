@@ -3,20 +3,22 @@ import React, { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Phaser from "phaser";
 
-// Assets
-import s_idle from "../../assets/Characters/suzuka/s_idle.png";
-import s_walk from "../../assets/Characters/suzuka/s_walk.png";
-import s_run from "../../assets/Characters/suzuka/s_run.png";
-import s_sprint from "../../assets/Characters/suzuka/s_sprint.png";
-import s_stopSprint from "../../assets/Characters/suzuka/s_stopSprint.png";
-import s_lowJump from "../../assets/Characters/suzuka/s_lowJump.png";
-import s_sprintJump from "../../assets/Characters/suzuka/s_sprintJump.png";
+const BASE = import.meta.env.BASE_URL || '/';
 
-import grass from "../../assets/GrassTileset/grass.png";
-import fence1 from "../../assets/Decorations/fence1.png";
-import cloud3 from "../../assets/Decorations/cloud3.png";
-import cloud5 from "../../assets/Decorations/cloud5.png";
-import sky from "../../assets/Backgrounds/sky.png";
+// Assets
+export const s_idle = `${BASE}assets/Characters/suzuka/S_idle.png`;
+export const s_walk = `${BASE}assets/Characters/suzuka/S_walk.png`;
+export const s_run = `${BASE}assets/Characters/suzuka/S_run.png`;
+export const s_sprint = `${BASE}assets/Characters/suzuka/S_sprint.png`;
+export const s_stopSprint = `${BASE}assets/Characters/suzuka/S_stopSprint.png`;
+export const s_lowJump = `${BASE}assets/Characters/suzuka/S_lowJump.png`;
+export const s_sprintJump = `${BASE}assets/Characters/suzuka/S_sprintJump.png`;
+
+export const grass = `${BASE}assets/GrassTileset/Grass.png`;
+export const fence1 = `${BASE}assets/Decorations/Fence1.png`;
+export const cloud3 = `${BASE}assets/Decorations/Cloud3.png`;
+export const cloud5 = `${BASE}assets/Decorations/Cloud5.png`;
+export const sky = `${BASE}assets/Backgrounds/Sky.png`;
 
 const Uma = () => {
     const gameRef = useRef(null);
