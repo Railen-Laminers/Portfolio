@@ -14,7 +14,7 @@ export const youtubeDownloader = `${BASE}assets/SwebImages/YoutubeDownloader.png
 
 const projects = [
     {
-        name: "Apartment Management System",
+        name: "Apartment Management System (Private Repo)",
         date: "2025-11-15",
         category: "Web",
         image: ams,
