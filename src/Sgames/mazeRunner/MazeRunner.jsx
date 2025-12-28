@@ -1,4 +1,3 @@
-// src/components/MazeRunner/MazeRunner.js
 import React, { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Phaser from "phaser";
@@ -8,7 +7,7 @@ import brickBlack from "../../assets/BrickTileset/brickBlack.png";
 import womenMc from "../../assets/Characters/womenMc.png";
 import enemy from "../../assets/Characters/enemy.png";
 
-// ✅ IMPORT EXTRACTED SCENES & DEBUG UTILS
+// IMPORT EXTRACTED SCENES & DEBUG UTILS
 import { MainMenuScene } from "./MainMenuScene";
 import { createDebugOverlay, updateDebugOverlay, cleanupDebugOverlay } from "./DebugOverlay";
 
@@ -47,8 +46,7 @@ const MazeRunner = () => {
             }
 
             create() {
-                // ✅ EXIT CALLBACK FOR MAIN MENU "Exit" BUTTON
-                this.scene.systems.game.exitCallback = () => navigate("/");
+                // ❌ REMOVED: exitCallback is now set globally on game instance
 
                 this.input.keyboard.on("keydown-ESC", () => {
                     this.scene.start("MainMenu");
@@ -603,6 +601,9 @@ const MazeRunner = () => {
         };
 
         game = new Phaser.Game(config);
+
+        // ✅ SET exitCallback IMMEDIATELY AFTER GAME CREATION
+        game.exitCallback = () => navigate("/");
 
         return () => {
             if (game) {

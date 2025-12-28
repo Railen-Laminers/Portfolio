@@ -1,7 +1,6 @@
-// src/components/MazeRunner/MainMenuScene.js
 import Phaser from "phaser";
 
-// Shared utilities (you can move these to a shared utils file if reused elsewhere)
+// Shared utilities
 export function readDarkMode() {
     try {
         const stored = localStorage.getItem("darkMode");

@@ -52,7 +52,7 @@ https://www.spriters-resource.com/pc_computer/umamusumeprettyderbypartydash/asse
 Spritesheet slicer
 https://www.gamedeveloperstudio.com/tools/spritesheet_slicer.php
 liberatedpixelcup.github.io
-You replied to yourself
+
 Spritesheet slicer for tilesets:
 https://tools.spriters-resource.com/#sprite-splitter
 

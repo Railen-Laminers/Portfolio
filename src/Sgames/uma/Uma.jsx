@@ -1,266 +1,151 @@
-// Uma.jsx
+// src/Sgames/uma/Uma.jsx
 import React, { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Phaser from "phaser";
-import MainMenu from "./MainMenuScene";
-import DebugOverlay from "./DebugOverlay";
 
-// Character sprite
-import s_idle from "../../assets/Characters/suzuka/s_idle.png"; // 3 frames & 192x64
-import s_walk from "../../assets/Characters/suzuka/s_walk.png"; // 6 frames & 384x64
-import s_run from "../../assets/Characters/suzuka/s_run.png"; // 6 frames & 384x64
-import s_sprint from "../../assets/Characters/suzuka/s_sprint.png"; // 6 frames & 384x64
-import s_stopSprint from "../../assets/Characters/suzuka/s_stopSprint.png"; // 3 frames & 192x64
-import s_lowJump from "../../assets/Characters/suzuka/s_lowJump.png"; // 4 frames & 256x64
-import s_sprintJump from "../../assets/Characters/suzuka/s_sprintJump.png"; // 7 frames & 448x64
+// Assets
+import s_idle from "../../assets/Characters/suzuka/s_idle.png";
+import s_walk from "../../assets/Characters/suzuka/s_walk.png";
+import s_run from "../../assets/Characters/suzuka/s_run.png";
+import s_sprint from "../../assets/Characters/suzuka/s_sprint.png";
+import s_stopSprint from "../../assets/Characters/suzuka/s_stopSprint.png";
+import s_lowJump from "../../assets/Characters/suzuka/s_lowJump.png";
+import s_sprintJump from "../../assets/Characters/suzuka/s_sprintJump.png";
 
-// Ground & Decorations
-import grass from "../../assets/GrassTileset/grass.png"; // 32x32
-import grassPlatform from "../../assets/GrassTileset/grassPlatform.png"; // 96x32
-import flower1 from "../../assets/Decorations/flower1.png"; // 19x23
-import flower2 from "../../assets/Decorations/flower2.png"; // 15x18
-import barrel from "../../assets/Decorations/barrel.png"; // 27x32
-import rock3 from "../../assets/Decorations/rock3.png"; // 25x13
-import stackedRocks from "../../assets/Decorations/stackedRocks.png"; // 49x35
-import tree1 from "../../assets/Decorations/tree1.png"; // 105x148
-import tree2 from "../../assets/Decorations/tree2.png"; // 99x137
-import house from "../../assets/Decorations/house.png"; // 155x133
-import fence1 from "../../assets/Decorations/fence1.png"; // 77x34
-import woodenShed from "../../assets/Decorations/woodenShed.png"; // 116x68
-
-// Clouds
-import cloud3 from "../../assets/Decorations/cloud3.png"; // 131x22
-import cloud5 from "../../assets/Decorations/cloud5.png"; // 101x28
-
-// Backgrounds
-import sky from "../../assets/Backgrounds/sky.png"; // 768x288
+import grass from "../../assets/GrassTileset/grass.png";
+import fence1 from "../../assets/Decorations/fence1.png";
+import cloud3 from "../../assets/Decorations/cloud3.png";
+import cloud5 from "../../assets/Decorations/cloud5.png";
+import sky from "../../assets/Backgrounds/sky.png";
 
 const Uma = () => {
     const gameRef = useRef(null);
     const navigate = useNavigate();
 
     useEffect(() => {
-        let game;
-        let player;
-        let keys;
+        // ───────────────────────────────────────
+        // 🎮 GAME CONFIGURATION — TUNE HERE!
+        // ───────────────────────────────────────
+        const GAME_CONFIG = {
+            // 🖥️ Display
+            WIDTH: 720,
+            HEIGHT: 510,
 
-        let wasSprinting = false;
-        let isStoppingSprint = false;
-        let isJumping = false;
-        let isSprintJumping = false;
-        let currentHorizontalSpeed = 0;
+            // 🌍 World
+            GROUND_Y: 462,           // Y position of ground (higher = lower ground)
+            GRAVITY: 1600,           // Strength of downward pull
 
-        const WALK_SPEED = 120;
-        const RUN_SPEED = 200;
-        const SPRINT_SPEED = 300;
-        const LOW_JUMP_VELOCITY = -260;
-        const SPRINT_JUMP_VELOCITY = -300;
-        const AIR_CONTROL_FACTOR = 0.8;
-        const INITIAL_JUMP_MOMENTUM_FACTOR = 0.7;
+            // 🦘 Jump
+            JUMP_VELOCITY: -500,     // Upward force when jumping (more negative = higher jump)
+            JUMP_KEYS: [             // Keys that trigger jump
+                Phaser.Input.Keyboard.KeyCodes.UP,
+                Phaser.Input.Keyboard.KeyCodes.W,
+                Phaser.Input.Keyboard.KeyCodes.SPACE,
+            ],
 
-        const WORLD_WIDTH = 2400;
-        const WORLD_HEIGHT = 600;
-        const GROUND_LEVEL = WORLD_HEIGHT - 40;
+            // 🏃 Player
+            PLAYER_START_X: 100,     // X position at spawn
+            PLAYER_HITBOX: {         // Hitbox relative to sprite (centered + snug)
+                width: 32,
+                height: 48,
+                offsetX: 16,         // (64 - 32) / 2 → centered horizontally
+                offsetY: 16,         // Raised slightly from bottom
+            },
 
-        class UmaScene extends Phaser.Scene {
+            // 🚧 Obstacles (fences)
+            FENCE_SPAWN_INTERVAL: 1500, // ms between spawns
+            FENCE_X_SPAWN: 760,      // Spawn off-screen right
+            FENCE_BASE_Y_OFFSET: -5, // Visual offset from ground
+            FENCE_SCALE_X: 0.55,     // Horizontal scale
+            FENCE_HEIGHT_VARIANTS: [1.0, 1.3], // Short / tall
+            FENCE_HITBOX: {          // Hitbox as % of visual size
+                widthFactor: 0.8,    // 80% of visual width
+                heightFactor: 0.85,  // 85% of visual height
+            },
+
+            // 📈 Progression
+            SPEED_INCREMENT: 0.5,    // Speed added every 5 points
+
+            // 💥 Bump Feedback
+            KNOCKBACK_X: -200,       // Horizontal knockback force on hit
+            KNOCKBACK_Y: -100,       // Small upward pop
+            BUMP_DURATION: 300,      // ms before game over (lets animation play)
+        };
+
+        const { WIDTH, HEIGHT, GROUND_Y } = GAME_CONFIG;
+
+        // ======================
+        // MAIN MENU SCENE
+        // ======================
+        class UmaMainMenu extends Phaser.Scene {
             constructor() {
-                super({ key: "UmaScene" });
+                super("UmaMainMenu");
             }
 
             preload() {
-                this.load.spritesheet("idle", s_idle, { frameWidth: 64, frameHeight: 64 });
-                this.load.spritesheet("walk", s_walk, { frameWidth: 64, frameHeight: 64 });
-                this.load.spritesheet("run", s_run, { frameWidth: 64, frameHeight: 64 });
-                this.load.spritesheet("sprint", s_sprint, { frameWidth: 64, frameHeight: 64 });
-                this.load.spritesheet("stopSprint", s_stopSprint, { frameWidth: 64, frameHeight: 64 });
-                this.load.spritesheet("lowJump", s_lowJump, { frameWidth: 64, frameHeight: 64 });
-                this.load.spritesheet("sprintJump", s_sprintJump, { frameWidth: 64, frameHeight: 64 });
-
-                // Use only single grass asset
-                this.load.image("grass", grass);
-
-                this.load.image("flower1", flower1);
-                this.load.image("flower2", flower2);
-                this.load.image("barrel", barrel);
-                this.load.image("rock3", rock3);
-                this.load.image("stackedRocks", stackedRocks);
-                this.load.image("tree1", tree1);
-                this.load.image("tree2", tree2);
-                this.load.image("house", house);
-                this.load.image("fence1", fence1);
-                this.load.image("woodenShed", woodenShed);
-
                 this.load.image("sky", sky);
                 this.load.image("cloud3", cloud3);
                 this.load.image("cloud5", cloud5);
             }
 
             create() {
-                this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-                this.createMenuButton();
-
-                const skyBg = this.add.image(0, 0, "sky").setOrigin(0, 0);
-                skyBg.displayWidth = WORLD_WIDTH;
-                skyBg.displayHeight = WORLD_HEIGHT;
-                skyBg.setScrollFactor(0, 0);
-                skyBg.debugId = "skyBg";
-
-                const clouds = this.add.group();
-                const cloudConfigs = [
-                    { x: 300, y: 100, key: "cloud3", scrollX: 0.2 },
-                    { x: 900, y: 80, key: "cloud5", scrollX: 0.15 },
-                    { x: 1500, y: 120, key: "cloud3", scrollX: 0.25 },
-                    { x: 2000, y: 90, key: "cloud5", scrollX: 0.18 },
-                ];
-
-                cloudConfigs.forEach((cfg, index) => {
-                    const cloud = this.add.image(cfg.x, cfg.y, cfg.key);
-                    cloud.setScrollFactor(cfg.scrollX, 0);
-                    cloud.debugId = `cloud_${index + 1}`;
-                    clouds.add(cloud);
-                });
-
-                const dirtGraphics = this.add.graphics();
-                dirtGraphics.fillStyle(0x8B5A2B, 1);
-                dirtGraphics.fillRect(0, GROUND_LEVEL, WORLD_WIDTH, WORLD_HEIGHT - GROUND_LEVEL);
-                dirtGraphics.setScrollFactor(1, 1);
-                dirtGraphics.debugId = "dirtLayer";
-
-                const groundGroup = this.physics.add.staticGroup();
-                for (let x = 0; x < WORLD_WIDTH; x += 16) {
-                    const tile = groundGroup.create(x, GROUND_LEVEL, "grass");
-                    tile.setScale(1, 0.5).refreshBody();
-                    tile.debugId = `groundTile_${x}`;
-                }
-
-                player = this.physics.add.sprite(200, GROUND_LEVEL - 70, "idle");
-                player.setCollideWorldBounds(true);
-                player.setBounce(0.1);
-                player.setDrag(500);
-                player.debugId = "player";
-
-                const decor = this.add.group();
-                const decorationConfigs = [
-                    { type: "tree1", x: 300, y: GROUND_LEVEL },
-                    { type: "tree2", x: 800, y: GROUND_LEVEL },
-                    { type: "tree1", x: 1400, y: GROUND_LEVEL },
-                    { type: "barrel", x: 500, y: GROUND_LEVEL },
-                    { type: "rock3", x: 700, y: GROUND_LEVEL },
-                    { type: "stackedRocks", x: 1100, y: GROUND_LEVEL },
-                    { type: "house", x: 1600, y: GROUND_LEVEL },
-                    { type: "woodenShed", x: 2000, y: GROUND_LEVEL },
-                    { type: "fence1", x: 2100, y: GROUND_LEVEL },
-                    { type: "flower1", x: 400, y: GROUND_LEVEL },
-                    { type: "flower2", x: 420, y: GROUND_LEVEL },
-                    { type: "flower1", x: 1200, y: GROUND_LEVEL },
-                ];
-
-                decorationConfigs.forEach((cfg, index) => {
-                    const dec = decor.create(cfg.x, cfg.y, cfg.type);
-                    dec.setOrigin(0.5, 1);
-                    dec.debugId = `decor_${cfg.type}_${index}`;
-                    dec.setDepth(0);
-                });
-
-                // Store groups for debug overlay
-                this.debugGroups = { ground: groundGroup, decorations: decor, clouds, player };
-
-                this.physics.add.collider(player, groundGroup);
-
-                this.anims.create({ key: "idle", frames: this.anims.generateFrameNumbers("idle", { start: 0, end: 2 }), frameRate: 6, repeat: -1 });
-                this.anims.create({ key: "walk", frames: this.anims.generateFrameNumbers("walk", { start: 0, end: 5 }), frameRate: 10, repeat: -1 });
-                this.anims.create({ key: "run", frames: this.anims.generateFrameNumbers("run", { start: 0, end: 5 }), frameRate: 12, repeat: -1 });
-                this.anims.create({ key: "sprint", frames: this.anims.generateFrameNumbers("sprint", { start: 0, end: 5 }), frameRate: 14, repeat: -1 });
-                this.anims.create({ key: "stopSprint", frames: this.anims.generateFrameNumbers("stopSprint", { start: 0, end: 2 }), frameRate: 10, repeat: 0 });
-                this.anims.create({ key: "lowJump", frames: this.anims.generateFrameNumbers("lowJump", { start: 0, end: 3 }), frameRate: 10, repeat: 0 });
-                this.anims.create({ key: "sprintJump", frames: this.anims.generateFrameNumbers("sprintJump", { start: 0, end: 6 }), frameRate: 12, repeat: 0 });
-
-                keys = this.input.keyboard.addKeys({
-                    left: "A",
-                    right: "D",
-                    up: "W",
-                    run: "K",
-                    sprint: "L",
-                });
-
-                this.input.keyboard.on("keydown-ESC", () => {
-                    this.scene.start("MainMenu");
-                });
-
-                player.play("idle");
-
-                this.cameras.main.startFollow(player, true, 0.1, 0.1, 0, 0);
-                this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-
-                // Initialize debug overlay (automatically sets up 'I' toggle)
-                this.debugOverlay = new DebugOverlay(this);
-
-                const instructions = this.add.text(
-                    this.cameras.main.centerX,
-                    50,
-                    "Use WASD to move, K to run, L to sprint\nPress ESC for menu",
-                    {
-                        font: "16px Arial",
-                        fill: "#ffffff",
-                        backgroundColor: "rgba(0, 0, 0, 0.5)",
-                        padding: { x: 10, y: 5 },
-                        align: "center"
-                    }
-                ).setOrigin(0.5, 0).setScrollFactor(0).setDepth(999);
-
-                this.time.delayedCall(5000, () => {
-                    this.tweens.add({
-                        targets: instructions,
-                        alpha: 0,
-                        duration: 1000,
-                        onComplete: () => instructions.destroy()
-                    });
-                });
-            }
-
-            createMenuButton() {
                 const isDark = this.readDarkMode();
-                const btnBg = isDark ? "#111827" : "#222222";
-                const btnHover = isDark ? "#1f2937" : "#333333";
-                const btnText = isDark ? "#f1f5f9" : "#ffffff";
+                this.add.image(0, 0, "sky").setOrigin(0).setDisplaySize(WIDTH, HEIGHT);
+                this.add.image(200, 80, "cloud3").setAlpha(0.6);
+                this.add.image(500, 120, "cloud5").setAlpha(0.7);
 
-                this.menuButton = this.add.text(
-                    750,
-                    20,
-                    "☰ Menu",
-                    {
-                        font: "18px Arial",
-                        fill: btnText,
+                const textColor = isDark ? "#f1f5f9" : "#1e293b";
+                const btnBg = isDark ? "#1e293b" : "#dbeafe";
+                const btnColor = isDark ? "#fbbf24" : "#92400e";
+
+                this.add.text(WIDTH / 2, 100, "UMA RUNNER", {
+                    fontSize: "48px",
+                    fill: textColor,
+                    stroke: isDark ? "#f59e0b" : "#7c2d12",
+                    strokeThickness: 3,
+                    fontFamily: "Arial"
+                }).setOrigin(0.5);
+
+                let y = 200;
+                const spacing = 70;
+
+                const addButton = (text, callback) => {
+                    const btn = this.add.text(WIDTH / 2, y, text, {
+                        fontSize: "32px",
+                        fill: btnColor,
                         backgroundColor: btnBg,
-                        padding: { x: 16, y: 8 },
+                        padding: { x: 24, y: 12 },
+                        fontFamily: "Arial"
                     })
-                    .setOrigin(1, 0)
-                    .setScrollFactor(0)
-                    .setDepth(1000)
-                    .setInteractive({ useHandCursor: true })
-                    .on("pointerdown", () => {
-                        this.scene.start("MainMenu");
-                    })
-                    .on("pointerover", () => {
-                        this.tweens.add({
-                            targets: this.menuButton,
-                            scaleX: 1.08,
-                            scaleY: 1.08,
-                            duration: 150,
-                            ease: "Power2"
-                        });
-                        this.menuButton.setBackgroundColor(btnHover);
-                    })
-                    .on("pointerout", () => {
-                        this.tweens.add({
-                            targets: this.menuButton,
-                            scaleX: 1,
-                            scaleY: 1,
-                            duration: 150,
-                            ease: "Power2"
-                        });
-                        this.menuButton.setBackgroundColor(btnBg);
-                    });
+                        .setOrigin(0.5)
+                        .setInteractive({ useHandCursor: true })
+                        .on("pointerdown", callback)
+                        .on("pointerover", () => btn.setScale(1.08))
+                        .on("pointerout", () => btn.setScale(1));
+                    y += spacing;
+                    return btn;
+                };
+
+                addButton("Start Game", () => this.scene.start("UmaGame"));
+                addButton("Controls", () => {
+                    alert(
+                        "CONTROLS\n" +
+                        "W / ↑ / SPACE: Jump\n" +
+                        "\nPress [I] during game for debug view\n" +
+                        "Press [ESC] to return to menu"
+                    );
+                });
+                addButton("Credits", () => {
+                    alert(
+                        "CREDITS\n" +
+                        "Character: Suzuka Sprite\n" +
+                        "Art: Custom Tileset\n" +
+                        "Game Design: Railen"
+                    );
+                });
+                addButton("Exit", () => {
+                    this.scene.systems.game.exitCallback?.();
+                });
             }
 
             readDarkMode() {
@@ -268,147 +153,352 @@ const Uma = () => {
                     const stored = localStorage.getItem("darkMode");
                     if (stored !== null) return stored === "true";
                 } catch { }
-                return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-            }
-
-            update() {
-                this.debugOverlay.update(player, this.debugGroups, WORLD_WIDTH, WORLD_HEIGHT, GROUND_LEVEL);
-
-                if (isStoppingSprint) {
-                    player.setVelocityX(0);
-                    return;
-                }
-
-                const movingLeft = keys.left.isDown;
-                const movingRight = keys.right.isDown;
-                const moving = movingLeft || movingRight;
-                const sprintingInput = keys.sprint.isDown && moving;
-                const onGround = player.body.blocked.down;
-
-                if (onGround) {
-                    isJumping = false;
-                    isSprintJumping = false;
-                    currentHorizontalSpeed = 0;
-                }
-
-                let targetSpeed = 0;
-                if (sprintingInput) targetSpeed = SPRINT_SPEED;
-                else if (keys.run.isDown && moving) targetSpeed = RUN_SPEED;
-                else if (moving) targetSpeed = WALK_SPEED;
-
-                if (movingLeft || movingRight) {
-                    if (movingLeft) player.setFlipX(false);
-                    else if (movingRight) player.setFlipX(true);
-
-                    if (onGround) {
-                        player.setVelocityX(movingLeft ? -targetSpeed : targetSpeed);
-                        currentHorizontalSpeed = targetSpeed;
-                    } else {
-                        let airSpeed = isSprintJumping ? SPRINT_SPEED * AIR_CONTROL_FACTOR : targetSpeed * AIR_CONTROL_FACTOR;
-                        player.setVelocityX(movingLeft ? -airSpeed : airSpeed);
-                    }
-                } else if (!onGround) {
-                    if (isSprintJumping && currentHorizontalSpeed > 0) {
-                        player.setVelocityX(player.flipX ? currentHorizontalSpeed * 0.9 : -currentHorizontalSpeed * 0.9);
-                    } else if (isJumping && currentHorizontalSpeed > 0) {
-                        player.setVelocityX(player.flipX ? currentHorizontalSpeed * 0.7 : -currentHorizontalSpeed * 0.7);
-                    } else {
-                        player.setVelocityX(player.body.velocity.x * 0.95);
-                    }
-                } else {
-                    player.setVelocityX(0);
-                    currentHorizontalSpeed = 0;
-                }
-
-                if (keys.up.isDown && onGround && sprintingInput) {
-                    player.setVelocityY(SPRINT_JUMP_VELOCITY);
-                    player.play("sprintJump", true);
-                    isJumping = true;
-                    isSprintJumping = true;
-                    wasSprinting = true;
-                    if (!moving) {
-                        player.setVelocityX(player.flipX ? SPRINT_SPEED * INITIAL_JUMP_MOMENTUM_FACTOR : -SPRINT_SPEED * INITIAL_JUMP_MOMENTUM_FACTOR);
-                        currentHorizontalSpeed = SPRINT_SPEED;
-                    }
-                } else if (keys.up.isDown && onGround && !sprintingInput) {
-                    player.setVelocityY(LOW_JUMP_VELOCITY);
-                    player.play("lowJump", true);
-                    isJumping = true;
-                    let jumpMomentumSpeed = keys.run.isDown ? RUN_SPEED : moving ? WALK_SPEED : WALK_SPEED;
-                    if (!moving) {
-                        player.setVelocityX(player.flipX ? jumpMomentumSpeed * INITIAL_JUMP_MOMENTUM_FACTOR : -jumpMomentumSpeed * INITIAL_JUMP_MOMENTUM_FACTOR);
-                        currentHorizontalSpeed = jumpMomentumSpeed;
-                    } else {
-                        currentHorizontalSpeed = jumpMomentumSpeed;
-                    }
-                }
-
-                if (!onGround) {
-                    if (isSprintJumping) player.play("sprintJump", true);
-                    else player.play("lowJump", true);
-                    return;
-                }
-
-                if (sprintingInput) {
-                    player.play("sprint", true);
-                    wasSprinting = true;
-                    return;
-                }
-
-                if (wasSprinting && (!keys.sprint.isDown || !moving)) {
-                    wasSprinting = false;
-                    isStoppingSprint = true;
-                    player.setVelocityX(0);
-                    player.play("stopSprint");
-                    player.once("animationcomplete-stopSprint", () => {
-                        isStoppingSprint = false;
-                        if (keys.run.isDown && (keys.left.isDown || keys.right.isDown)) player.play("run", true);
-                        else if (keys.left.isDown || keys.right.isDown) player.play("walk", true);
-                        else player.play("idle", true);
-                    });
-                    return;
-                }
-
-                if (keys.run.isDown && moving) {
-                    player.play("run", true);
-                    return;
-                }
-                if (moving) {
-                    player.play("walk", true);
-                    return;
-                }
-
-                player.play("idle", true);
+                return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
             }
         }
 
+        // ======================
+        // GAME SCENE
+        // ======================
+        class UmaGame extends Phaser.Scene {
+            constructor() {
+                super("UmaGame");
+            }
+
+            preload() {
+                // Load ALL assets
+                this.load.spritesheet("s_idle", s_idle, { frameWidth: 64, frameHeight: 64 });
+                this.load.spritesheet("s_walk", s_walk, { frameWidth: 64, frameHeight: 64 });
+                this.load.spritesheet("s_run", s_run, { frameWidth: 64, frameHeight: 64 });
+                this.load.spritesheet("s_sprint", s_sprint, { frameWidth: 64, frameHeight: 64 });
+                this.load.spritesheet("s_stopSprint", s_stopSprint, { frameWidth: 64, frameHeight: 64 });
+                this.load.spritesheet("s_lowJump", s_lowJump, { frameWidth: 64, frameHeight: 64 });
+                this.load.spritesheet("s_sprintJump", s_sprintJump, { frameWidth: 64, frameHeight: 64 });
+
+                this.load.image("sky", sky);
+                this.load.image("cloud3", cloud3);
+                this.load.image("cloud5", cloud5);
+                this.load.image("grass", grass);
+                this.load.image("fence1", fence1);
+            }
+
+            create() {
+                const {
+                    GROUND_Y,
+                    PLAYER_START_X,
+                    PLAYER_HITBOX,
+                    JUMP_KEYS
+                } = GAME_CONFIG;
+
+                this.gameStarted = false;
+                this.localGameOver = false;
+                this.score = 0;
+                this.gameSpeed = 5;
+                this.obstacles = [];
+                this.obstacleTimer = 0;
+                this.isBumping = false; // 👈 Prevent multiple bumps
+
+                // Background
+                this.add.image(0, 0, "sky").setOrigin(0).setDisplaySize(WIDTH, HEIGHT);
+                this.add.rectangle(WIDTH / 2, HEIGHT - 25, WIDTH, 50, 0x8b4513);
+
+                // Clouds
+                this.clouds = this.add.group();
+                this.clouds.add(this.add.image(200, 80, "cloud3").setAlpha(0.8));
+                this.clouds.add(this.add.image(500, 120, "cloud5").setAlpha(0.8));
+
+                // Ground
+                this.groundGroup = this.physics.add.staticGroup();
+                for (let x = 0; x < WIDTH; x += 16) {
+                    this.groundGroup.create(x, GROUND_Y, "grass").setOrigin(0, 1);
+                }
+
+                // Player
+                this.player = this.physics.add.sprite(PLAYER_START_X, GROUND_Y - 16, "s_idle");
+                this.player.setOrigin(0.5, 1);
+                this.player.setFlipX(true);
+                this.player.setCollideWorldBounds(true);
+
+                // ✅ CENTERED HITBOX: snug and aligned
+                this.player.body.setSize(
+                    PLAYER_HITBOX.width,
+                    PLAYER_HITBOX.height
+                );
+                this.player.body.setOffset(
+                    PLAYER_HITBOX.offsetX,
+                    PLAYER_HITBOX.offsetY
+                );
+
+                this.physics.add.collider(this.player, this.groundGroup);
+
+                // Animations
+                this.anims.create({ key: "idle", frames: this.anims.generateFrameNumbers("s_idle", { start: 0, end: 2 }), frameRate: 3, repeat: -1 });
+                this.anims.create({ key: "walk", frames: this.anims.generateFrameNumbers("s_walk", { start: 0, end: 5 }), frameRate: 10, repeat: -1 });
+                this.anims.create({ key: "run", frames: this.anims.generateFrameNumbers("s_run", { start: 0, end: 5 }), frameRate: 12, repeat: -1 });
+                this.anims.create({ key: "sprint", frames: this.anims.generateFrameNumbers("s_sprint", { start: 0, end: 5 }), frameRate: 15, repeat: -1 });
+                this.anims.create({ key: "stopSprint", frames: this.anims.generateFrameNumbers("s_stopSprint", { start: 0, end: 2 }), frameRate: 10 });
+                this.anims.create({ key: "lowJump", frames: this.anims.generateFrameNumbers("s_lowJump", { start: 0, end: 3 }), frameRate: 12 });
+                this.anims.create({ key: "sprintJump", frames: this.anims.generateFrameNumbers("s_sprintJump", { start: 0, end: 6 }), frameRate: 15 });
+
+                this.player.play("idle");
+
+                // Input
+                this.cursors = this.input.keyboard.createCursorKeys();
+                this.keyW = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
+                this.keySpace = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+                this.keyI = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.I);
+                this.debugMode = false;
+
+                this.scoreText = this.add.text(16, 16, "Score: 0", { fontSize: "20px", fill: "#000" });
+
+                // ESC → Main Menu
+                this.input.keyboard.on("keydown-ESC", () => {
+                    this.scene.start("UmaMainMenu");
+                });
+
+                // Countdown
+                const text = this.add.text(WIDTH / 2, HEIGHT / 2, "3", { fontSize: "64px", fill: "#000" }).setOrigin(0.5);
+                let count = 3;
+                this.time.addEvent({
+                    delay: 1000,
+                    repeat: 2,
+                    callback: () => {
+                        count--;
+                        if (count > 0) text.setText(count);
+                        else {
+                            text.setText("");
+                            this.gameStarted = true;
+                            this.player.play("walk");
+                        }
+                    },
+                });
+
+                // Game Over UI
+                this.gameOverText = this.add.text(WIDTH / 2, HEIGHT / 2 - 40, "Game Over", { fontSize: "48px", fill: "#ff3333" })
+                    .setOrigin(0.5).setVisible(false);
+                this.finalScoreText = this.add.text(WIDTH / 2, HEIGHT / 2 + 20, "", { fontSize: "28px", fill: "#000" })
+                    .setOrigin(0.5).setVisible(false);
+                this.retryButton = this.add.text(WIDTH / 2, HEIGHT / 2 + 80, "Retry", {
+                    fontSize: "32px",
+                    fill: "#fff",
+                    backgroundColor: "#e53e3e",
+                    padding: { x: 20, y: 10 }
+                }).setOrigin(0.5).setVisible(false).setInteractive().on("pointerdown", () => this.scene.restart());
+
+                this.menuButton = this.add.text(WIDTH / 2, HEIGHT / 2 + 140, "Main Menu", {
+                    fontSize: "28px",
+                    fill: "#fff",
+                    backgroundColor: "#3182ce",
+                    padding: { x: 20, y: 10 }
+                }).setOrigin(0.5).setVisible(false).setInteractive().on("pointerdown", () => this.scene.start("UmaMainMenu"));
+
+                // Debug
+                this.debugGraphics = null;
+                this.debugLabels = [];
+
+                this.events.on("shutdown", this.cleanupDebug, this);
+            }
+
+            update(time, delta) {
+                if (!this.gameStarted || this.localGameOver) {
+                    if (this.debugMode) this.updateDebug();
+                    return;
+                }
+
+                // Toggle debug
+                if (Phaser.Input.Keyboard.JustDown(this.keyI)) {
+                    this.debugMode = !this.debugMode;
+                    this.updateDebug();
+                }
+
+                // Clouds
+                this.clouds.children.iterate(c => {
+                    c.x -= 0.3;
+                    if (c.x < -150) c.x = 850;
+                });
+
+                // ✅ JUMP: W / UP / SPACE
+                const { JUMP_KEYS } = GAME_CONFIG;
+                const jumpPressed = JUMP_KEYS.some(keyCode => {
+                    const key = this.input.keyboard.addKey(keyCode);
+                    return Phaser.Input.Keyboard.JustDown(key);
+                });
+
+                if (jumpPressed && this.player.body.blocked.down) {
+                    this.player.setVelocityY(GAME_CONFIG.JUMP_VELOCITY);
+                    this.player.play(this.gameSpeed >= 7 ? "sprintJump" : "lowJump", true);
+                }
+
+                // Animation
+                if (this.player.body.blocked.down && !this.player.anims.isPlaying) {
+                    if (this.gameSpeed < 7) this.player.play("walk", true);
+                    else if (this.gameSpeed < 10) this.player.play("run", true);
+                    else this.player.play("sprint", true);
+                }
+
+                // Spawn fences
+                const { FENCE_SPAWN_INTERVAL, FENCE_X_SPAWN, FENCE_BASE_Y_OFFSET, FENCE_SCALE_X, FENCE_HEIGHT_VARIANTS, FENCE_HITBOX } = GAME_CONFIG;
+                this.obstacleTimer += delta;
+                if (this.obstacleTimer > FENCE_SPAWN_INTERVAL) {
+                    this.obstacleTimer = 0;
+                    const heightScale = Phaser.Utils.Array.GetRandom(FENCE_HEIGHT_VARIANTS);
+                    const baseY = GROUND_Y + FENCE_BASE_Y_OFFSET;
+
+                    const fence = this.physics.add.image(FENCE_X_SPAWN, baseY, "fence1");
+                    fence.setOrigin(0.5, 1);
+                    fence.setScale(FENCE_SCALE_X, heightScale);
+
+                    // ✅ CENTERED & FAIR HITBOX
+                    const displayWidth = fence.width * FENCE_SCALE_X;
+                    const displayHeight = fence.height * heightScale;
+                    const hitboxWidth = displayWidth * FENCE_HITBOX.widthFactor;
+                    const hitboxHeight = displayHeight * FENCE_HITBOX.heightFactor;
+
+                    fence.body.setSize(hitboxWidth, hitboxHeight);
+                    fence.body.setOffset(
+                        (fence.width - hitboxWidth) / 2,   // Center horizontally
+                        fence.height - hitboxHeight        // Align to bottom
+                    );
+
+                    fence.body.allowGravity = false;
+                    fence.setImmovable(true);
+                    this.obstacles.push(fence);
+                }
+
+                // Update obstacles & check collision
+                for (let i = this.obstacles.length - 1; i >= 0; i--) {
+                    const obs = this.obstacles[i];
+                    obs.x -= this.gameSpeed;
+
+                    if (this.physics.overlap(this.player, obs)) {
+                        if (!this.isBumping) {
+                            this.isBumping = true;
+                            this.onBump(); // 👈 Trigger knockback + animation
+                        }
+                        return;
+                    }
+
+                    if (obs.x < -50) {
+                        obs.destroy();
+                        this.obstacles.splice(i, 1);
+                        this.score++;
+                        this.scoreText.setText(`Score: ${this.score}`);
+                        if (this.score % 5 === 0) this.gameSpeed += GAME_CONFIG.SPEED_INCREMENT;
+                    }
+                }
+
+                if (this.debugMode) this.updateDebug();
+            }
+
+            // 💥 New: Bump reaction with knockback and animation
+            onBump() {
+                // Play stop sprint animation
+                this.player.play("stopSprint", true);
+
+                // Apply knockback
+                this.player.setVelocityX(GAME_CONFIG.KNOCKBACK_X);
+                this.player.setVelocityY(GAME_CONFIG.KNOCKBACK_Y);
+
+                // Freeze gameplay during bump
+                this.gameStarted = false;
+
+                // End game after animation
+                this.time.delayedCall(GAME_CONFIG.BUMP_DURATION, () => {
+                    this.onGameOver();
+                });
+            }
+
+            // Updated: Simpler game over (animation already played)
+            onGameOver() {
+                this.localGameOver = true;
+                this.player.setVelocity(0, 0); // Full stop
+
+                this.gameOverText.setVisible(true);
+                this.finalScoreText.setText(`Final Score: ${this.score}`).setVisible(true);
+                this.retryButton.setVisible(true);
+                this.menuButton.setVisible(true);
+            }
+
+            // 🔧 Debug Overlay
+            updateDebug() {
+                if (!this.debugMode) {
+                    this.cleanupDebug();
+                    return;
+                }
+
+                if (!this.debugGraphics) {
+                    this.debugGraphics = this.add.graphics();
+                    this.debugGraphics.setDepth(1000);
+                    this.debugLabels = [];
+                } else {
+                    this.debugGraphics.clear();
+                }
+
+                this.debugLabels?.forEach(l => l.destroy?.());
+                this.debugLabels = [];
+
+                const drawBody = (obj, label, color = 0x00ffff) => {
+                    const body = obj.body;
+                    if (!body) return;
+                    const x = body.x + body.offset.x;
+                    const y = body.y + body.offset.y;
+                    const w = body.width;
+                    const h = body.height;
+                    this.debugGraphics.lineStyle(2, color, 0.9);
+                    this.debugGraphics.strokeRect(x, y, w, h);
+                    const text = this.add.text(x, y - 18, `${label}`, { font: "12px monospace", fill: "#00ffff" }).setDepth(1001);
+                    this.debugLabels.push(text);
+                };
+
+                drawBody(this.player, "Player", 0x00ffff);
+                this.obstacles.forEach((obs, i) => drawBody(obs, `Fence ${i}`, 0xff00ff));
+            }
+
+            cleanupDebug() {
+                if (this.debugGraphics) {
+                    this.debugGraphics.destroy();
+                    this.debugGraphics = null;
+                }
+                if (this.debugLabels) {
+                    this.debugLabels.forEach(l => l.destroy?.());
+                    this.debugLabels = [];
+                }
+            }
+        }
+
+        // ======================
+        // PHASER GAME
+        // ======================
         const config = {
             type: Phaser.AUTO,
-            width: 800,
-            height: 600,
-            parent: gameRef.current,
+            width: GAME_CONFIG.WIDTH,
+            height: GAME_CONFIG.HEIGHT,
+            parent: "uma-game-container",
             physics: {
                 default: "arcade",
                 arcade: {
-                    gravity: { y: 800 },
+                    gravity: { y: GAME_CONFIG.GRAVITY },
                     debug: false,
                 },
             },
-            scene: [MainMenu, UmaScene],
+            scene: [UmaMainMenu, UmaGame],
         };
 
-        game = new Phaser.Game(config);
-        window.__exitToHome = () => navigate("/");
+        const game = new Phaser.Game(config);
+        game.exitCallback = () => navigate("/");
+
+        gameRef.current = game;
 
         return () => {
-            if (game) game.destroy(true);
-            delete window.__exitToHome;
+            if (game) {
+                try { game.destroy(true); } catch (e) { }
+            }
         };
     }, [navigate]);
 
     return (
-        <div style={{ width: "100vw", height: "100vh", display: "flex", justifyContent: "center", alignItems: "center" }}>
-            <div ref={gameRef} style={{ width: 800, height: 600 }} />
+        <div style={{ width: "100%", height: "100vh", display: "flex", justifyContent: "center", alignItems: "center" }}>
+            <div id="uma-game-container" />
         </div>
     );
 };
