@@ -632,13 +632,6 @@ const Race = () => {
                             >
                                 Race Again
                             </button>
-
-                            <button
-                                onClick={() => navigate('/')}
-                                className="px-5 py-3 sm:px-6 sm:py-3 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-lg transition-colors active:scale-95 text-sm sm:text-base"
-                            >
-                                Main Menu
-                            </button>
                         </div>
                     </div>
                 </div>
