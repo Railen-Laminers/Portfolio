@@ -9,6 +9,7 @@ import { SiMysql, SiTailwindcss } from "react-icons/si";
 const BASE = import.meta.env.BASE_URL || "/";
 export const maze = `${BASE}assets/SgamesImages/Maze.png`;
 export const uma = `${BASE}assets/SgamesImages/Uma.png`;
+export const race = `${BASE}assets/SgamesImages/Race.png`;
 export const ams = `${BASE}assets/SwebImages/Ams.png`;
 export const youtubeDownloader = `${BASE}assets/SwebImages/YoutubeDownloader.png`;
 
@@ -55,6 +56,17 @@ const projects = [
         category: "games",
         image: uma,
         link: "/Uma",
+        techStack: [
+            { icon: <FaReact />, color: "text-sky-400", name: "React" },
+            { icon: <FaJsSquare />, color: "text-yellow-400", name: "Phaser.js" },
+        ],
+    },
+    {
+        name: "Race",
+        date: "2026-01-09",
+        category: "games",
+        image: race,
+        link: "/race",
         techStack: [
             { icon: <FaReact />, color: "text-sky-400", name: "React" },
             { icon: <FaJsSquare />, color: "text-yellow-400", name: "Phaser.js" },

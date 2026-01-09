@@ -21,6 +21,8 @@ import s_stopSprint from "../../assets/Characters/suzuka/s_stopSprint.png"; // 3
 import s_lowJump from "../../assets/Characters/suzuka/s_lowJump.png"; // 4 frames & 256x64
 import s_sprintJump from "../../assets/Characters/suzuka/s_sprintJump.png"; // 7 frames & 448x64
 
+
+
 // Ground & Decorations
 import grass from "../../assets/GrassTileset/grass.png"; // 32x32
 import grassPlatform from "../../assets/GrassTileset/grassPlatform.png"; // 96x32

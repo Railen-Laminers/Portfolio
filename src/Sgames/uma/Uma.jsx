@@ -25,6 +25,15 @@ export const o_stopSprint = `${BASE}assets/Characters/oguri/O_stopSprint.png`;
 export const o_lowJump = `${BASE}assets/Characters/oguri/O_lowJump.png`;
 export const o_sprintJump = `${BASE}assets/Characters/oguri/O_sprintJump.png`;
 
+// Mc Queen (full frame set)
+export const mc_idle = `${BASE}assets/Characters/mcQueen/Mc_idle.png`;
+export const mc_walk = `${BASE}assets/Characters/mcQueen/Mc_walk.png`;
+export const mc_run = `${BASE}assets/Characters/mcQueen/Mc_run.png`;
+export const mc_sprint = `${BASE}assets/Characters/mcQueen/Mc_sprint.png`;
+export const mc_stopSprint = `${BASE}assets/Characters/mcQueen/Mc_stopSprint.png`;
+export const mc_lowJump = `${BASE}assets/Characters/mcQueen/Mc_lowJump.png`;
+export const mc_sprintJump = `${BASE}assets/Characters/mcQueen/Mc_sprintJump.png`;
+
 export const grass = `${BASE}assets/GrassTileset/Grass.png`;
 export const fence1 = `${BASE}assets/Decorations/Fence1.png`;
 export const cloud3 = `${BASE}assets/Decorations/Cloud3.png`;
@@ -50,6 +59,15 @@ const CHARACTERS = {
         stopSprint: o_stopSprint,
         lowJump: o_lowJump,
         sprintJump: o_sprintJump,
+    },
+    "Mc Queen": {
+        idle: mc_idle,
+        walk: mc_walk,
+        run: mc_run,
+        sprint: mc_sprint,
+        stopSprint: mc_stopSprint,
+        lowJump: mc_lowJump,
+        sprintJump: mc_sprintJump,
     }
 };
 
@@ -139,6 +157,12 @@ const Uma = () => {
                 this.load.image("sky", sky);
                 this.load.image("cloud3", cloud3);
                 this.load.image("cloud5", cloud5);
+
+                // Load an *idle preview* spritesheet for every character so we can show animated previews in the menu
+                Object.entries(CHARACTERS).forEach(([name, char]) => {
+                    // unique key per-character to avoid colliding with game preload keys
+                    this.load.spritesheet(`${name}_idle_preview`, char.idle, { frameWidth: 64, frameHeight: 64 });
+                });
             }
 
             create() {
@@ -151,7 +175,7 @@ const Uma = () => {
                 const btnBg = isDark ? "#1e293b" : "#dbeafe";
                 const btnColor = isDark ? "#fbbf24" : "#92400e";
 
-                this.add.text(WIDTH / 2, 100, "UMA RUNNER", {
+                this.add.text(WIDTH / 2, 60, "UMA", {
                     fontSize: "48px",
                     fill: textColor,
                     stroke: isDark ? "#f59e0b" : "#7c2d12",
@@ -159,70 +183,110 @@ const Uma = () => {
                     fontFamily: "Arial"
                 }).setOrigin(0.5);
 
-                let y = 200;
-                const spacing = 70;
+                // ----- Character selector row (click a portrait to select) -----
+                const characterNames = Object.keys(CHARACTERS);
+                // starting x to center the row (100px spacing)
+                const spacing = 120;
+                const startX = WIDTH / 2 - ((characterNames.length - 1) * spacing) / 2;
+                const y = 160;
 
-                const addButton = (text, callback) => {
-                    const btn = this.add.text(WIDTH / 2, y, text, {
-                        fontSize: "32px",
+                // Create an anim and portrait for each character
+                this.characterWidgets = []; // keep references to update highlight
+                characterNames.forEach((name, idx) => {
+                    const safeName = name.replace(/\s+/g, "_");
+                    const previewKey = `${name}_idle_preview`;
+                    const animKey = `menu_idle_${safeName}`;
+
+                    // create menu-only animation (if not exists)
+                    if (!this.anims.exists(animKey)) {
+                        this.anims.create({
+                            key: animKey,
+                            frames: this.anims.generateFrameNumbers(previewKey, { start: 0, end: 2 }),
+                            frameRate: 4,
+                            repeat: -1
+                        });
+                    }
+
+                    const x = startX + idx * spacing;
+
+                    // portrait sprite
+                    const sprite = this.add.sprite(x, y, previewKey, 0).setScale(0.9).setInteractive({ useHandCursor: true });
+                    sprite.play(animKey);
+
+                    // label
+                    const label = this.add.text(x, y + 46, name, {
+                        fontSize: "16px",
                         fill: btnColor,
-                        backgroundColor: btnBg,
-                        padding: { x: 24, y: 12 },
+                        fontFamily: "Arial"
+                    }).setOrigin(0.5);
+
+                    // highlight rectangle (visible if selected)
+                    const rect = this.add.rectangle(x, y - 6, 88, 88, 0xffffff, 0.08).setStrokeStyle(2, 0xffffff, 0.12);
+                    rect.setOrigin(0.5);
+
+                    // click handler
+                    const choose = () => {
+                        this.selectedCharacter = name;
+                        safeSet(STORAGE_KEY, name);
+                        // update visual highlight
+                        this.characterWidgets.forEach(w => {
+                            w.rect.setVisible(w.name === name);
+                            w.label.setStyle({ fill: w.name === name ? "#ffffff" : btnColor });
+                            w.sprite.setScale(w.name === name ? 1.02 : 0.9);
+                        });
+                    };
+
+                    sprite.on("pointerdown", choose);
+                    label.setInteractive({ useHandCursor: true }).on("pointerdown", choose);
+
+                    this.characterWidgets.push({ name, sprite, label, rect });
+                });
+
+                // Initialize highlight based on stored selection
+                if (!this.selectedCharacter || !characterNames.includes(this.selectedCharacter)) {
+                    this.selectedCharacter = characterNames[0];
+                    safeSet(STORAGE_KEY, this.selectedCharacter);
+                }
+                this.characterWidgets.forEach(w => {
+                    w.rect.setVisible(w.name === this.selectedCharacter);
+                    w.label.setStyle({ fill: w.name === this.selectedCharacter ? "#ffffff" : btnColor });
+                    w.sprite.setScale(w.name === this.selectedCharacter ? 1.02 : 0.9);
+                });
+
+                // ----- Menu buttons ----- (positioned below selector)
+                let by = 300;
+                const addButton = (text, callback, opts = {}) => {
+                    const btn = this.add.text(WIDTH / 2, by, text, {
+                        fontSize: opts.fontSize ?? "28px",
+                        fill: opts.fill ?? "#fff",
+                        backgroundColor: opts.bg ?? "#3182ce",
+                        padding: { x: 20, y: 10 },
                         fontFamily: "Arial"
                     })
                         .setOrigin(0.5)
                         .setInteractive({ useHandCursor: true })
                         .on("pointerdown", callback)
-                        .on("pointerover", () => btn.setScale(1.08))
+                        .on("pointerover", () => btn.setScale(1.04))
                         .on("pointerout", () => btn.setScale(1));
-                    y += spacing;
+                    by += opts.spacing ?? 56;
                     return btn;
                 };
 
-                // -----------------------------
-                // PHASER DROPDOWN BUTTON (styled like menu buttons)
-                // -----------------------------
-                const characterNames = Object.keys(CHARACTERS);
-                let selectedIndex = characterNames.indexOf(this.selectedCharacter ?? "Suzuka");
-                if (selectedIndex < 0) selectedIndex = 0;
-                this.selectedCharacter = characterNames[selectedIndex];
-
-                // Create the dropdown-like button with arrow appended (e.g. "Suzuka >")
-                const dropdownText = this.add.text(WIDTH / 2, y, `${this.selectedCharacter} >`, {
-                    fontSize: "32px",
-                    fill: btnColor,
-                    backgroundColor: btnBg,
-                    padding: { x: 24, y: 12 },
-                    fontFamily: "Arial"
-                })
-                    .setOrigin(0.5)
-                    .setInteractive({ useHandCursor: true })
-                    .on("pointerdown", () => {
-                        // Cycle to next character
-                        selectedIndex = (selectedIndex + 1) % characterNames.length;
-                        this.selectedCharacter = characterNames[selectedIndex];
-                        dropdownText.setText(`${this.selectedCharacter} >`);
-                        safeSet(STORAGE_KEY, this.selectedCharacter);
-                    })
-                    .on("pointerover", () => dropdownText.setScale(1.08))
-                    .on("pointerout", () => dropdownText.setScale(1));
-
-                y += spacing; // move down for the rest of the buttons
-
-                // Menu buttons
                 addButton("Start Game", () => {
                     safeSet(STORAGE_KEY, this.selectedCharacter ?? "Suzuka");
                     this.scene.start("UmaGame");
-                });
+                }, { bg: "#e53e3e", fill: "#fff", fontSize: "32px", spacing: 66 });
+
                 addButton("Controls", () => {
                     alert(
                         "CONTROLS\n" +
                         "W / ↑ / SPACE: Jump\n" +
                         "\nPress [I] during game for debug view\n" +
                         "Press [ESC] to return to menu \n" +
-                        "Press the character name to change sprite"
+                        "Click a character portrait to select a character"
                     );
-                });
+                }, { bg: btnBg, fill: btnColor });
+
                 addButton("Credits", () => {
                     alert(
                         "CREDITS\n" +
@@ -230,10 +294,11 @@ const Uma = () => {
                         "Art: Custom Tileset\n" +
                         "Game Design: Railen"
                     );
-                });
+                }, { bg: btnBg, fill: btnColor });
+
                 addButton("Exit", () => {
                     this.scene.systems.game.exitCallback?.();
-                });
+                }, { bg: btnBg, fill: btnColor });
             }
 
             readDarkMode() {
