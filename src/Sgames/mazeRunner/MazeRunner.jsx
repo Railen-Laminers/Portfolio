@@ -147,7 +147,7 @@ const MazeRunner = () => {
                 this.enemySpeed = 70 + (this.level - 1) * 8;
                 this.enemySpawnDistance = TILE * 3;
 
-                const maze = generateMazeGrid(FIXED_CELLS_X, FIXED_CELLS_Y);
+                const maze = generateMazeGrid(FIXED_CELLS_X, FIXED_CELLS_Y, 15); // e.g., 4 extra paths
                 this.mazeGrid = maze;
 
                 this.walls = [];
@@ -883,38 +883,76 @@ const MazeRunner = () => {
             }
         }
 
-        function generateMazeGrid(cellsX, cellsY) {
-            const rows = cellsY * 2 + 1, cols = cellsX * 2 + 1;
+        function generateMazeGrid(cellsX, cellsY, extraPaths = 3) {
+            const rows = cellsY * 2 + 1;
+            const cols = cellsX * 2 + 1;
             const grid = Array.from({ length: rows }, () => Array(cols).fill(1));
             const visited = Array.from({ length: cellsY }, () => Array(cellsX).fill(false));
             const toGrid = (cx, cy) => ({ col: cx * 2 + 1, row: cy * 2 + 1 });
+
             const stack = [];
             visited[0][0] = true;
-            const g = toGrid(0, 0); grid[g.row][g.col] = 0;
+            const g = toGrid(0, 0);
+            grid[g.row][g.col] = 0;
             stack.push({ cx: 0, cy: 0 });
-            const dirs = [{ dx: 0, dy: -1 }, { dx: 1, dy: 0 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }];
 
+            const dirs = [
+                { dx: 0, dy: -1 },
+                { dx: 1, dy: 0 },
+                { dx: 0, dy: 1 },
+                { dx: -1, dy: 0 }
+            ];
+
+            // Step 1: Generate a perfect maze using DFS
             while (stack.length) {
                 const cur = stack[stack.length - 1];
                 const neighbors = [];
                 for (const d of dirs) {
-                    const nx = cur.cx + d.dx, ny = cur.cy + d.dy;
-                    if (nx >= 0 && nx < cellsX && ny >= 0 && ny < cellsY && !visited[ny][nx]) neighbors.push({ cx: nx, cy: ny });
+                    const nx = cur.cx + d.dx;
+                    const ny = cur.cy + d.dy;
+                    if (nx >= 0 && nx < cellsX && ny >= 0 && ny < cellsY && !visited[ny][nx]) {
+                        neighbors.push({ cx: nx, cy: ny });
+                    }
                 }
-                if (!neighbors.length) stack.pop();
-                else {
+                if (!neighbors.length) {
+                    stack.pop();
+                } else {
                     const nxt = Phaser.Math.RND.pick(neighbors);
                     const curG = toGrid(cur.cx, cur.cy);
                     const nxtG = toGrid(nxt.cx, nxt.cy);
-                    grid[(curG.row + nxtG.row) / 2][(curG.col + nxtG.col) / 2] = 0;
+                    grid[(curG.row + nxtG.row) / 2][(curG.col + nxtG.col) / 2] = 0; // break wall
                     grid[nxtG.row][nxtG.col] = 0;
                     visited[nxt.cy][nxt.cx] = true;
                     stack.push(nxt);
                 }
             }
+
+            // Step 2: Add extra random passages (remove random internal walls)
+            let added = 0;
+            const attempts = 0;
+            const maxAttempts = 100;
+            while (added < extraPaths && attempts < maxAttempts) {
+                // Pick a random wall cell (must be odd coordinates for walls between cells)
+                const r = Phaser.Math.RND.between(1, rows - 2);
+                const c = Phaser.Math.RND.between(1, cols - 2);
+
+                // Only consider walls that are between two open paths (i.e., surrounded by 0s in opposite directions)
+                if (grid[r][c] === 1) {
+                    // Check horizontal neighbors
+                    if (r % 2 === 1 && c % 2 === 0 && grid[r][c - 1] === 0 && grid[r][c + 1] === 0) {
+                        grid[r][c] = 0;
+                        added++;
+                    }
+                    // Check vertical neighbors
+                    else if (r % 2 === 0 && c % 2 === 1 && grid[r - 1][c] === 0 && grid[r + 1][c] === 0) {
+                        grid[r][c] = 0;
+                        added++;
+                    }
+                }
+            }
+
             return grid;
         }
-
         function findFinishPos(grid) {
             for (let r = grid.length - 2; r >= 1; r--) {
                 for (let c = grid[0].length - 2; c >= 1; c--) {
