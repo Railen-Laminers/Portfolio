@@ -197,7 +197,7 @@ const MazeRunner = () => {
                 this.keyI = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.I);
 
                 // === MOBILE: TOP-RIGHT OVERLAY ===
-                const textPrimary = isDark ? "#e6f9ff" : "#06111a";
+                const textPrimary = isDark ? "#ffffff" : "#ffffff";
                 const menuBtnBg = isDark ? "#1e293b85" : "#4a5568";
                 const menuBtnHover = isDark ? "#334155" : "#6b7280";
                 const menuBtnText = isDark ? "#f1f5f9" : "#ffffff";

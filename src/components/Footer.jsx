@@ -91,7 +91,7 @@ function Footer() {
                     hover:rotate-0 hover:scale-110
                     transition-all duration-300
                     animate-fade-in
-                    z-10
+                    z-10 me-1
                   `}
                                     style={{ animationDelay: `${index * 0.1}s` }}
                                     aria-label={`Contact via ${contact.icon.type.name.replace('Fa', '').replace('Si', '')}`}
