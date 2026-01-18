@@ -85,7 +85,7 @@ const MazeRunner = () => {
         const MAZE_HEIGHT = UI_PANEL_POSITION === 'bottom' ? GAME_HEIGHT - 100 : GAME_HEIGHT;
 
         // --- COLOR: single accent color (change here) ---
-        const ACCENT_HEX = "#a31616"; // <- change this to any hex color you prefer
+        const ACCENT_HEX = "#8d0202"; // <- change this to any hex color you prefer
         const ACCENT = parseInt(ACCENT_HEX.slice(1), 16); // Phaser uses number hex like 0x16a34a
 
         function hexToRgba(hex, alpha = 1) {
@@ -234,10 +234,10 @@ const MazeRunner = () => {
                 this.keyI = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.I);
 
                 // === MOBILE: TOP-RIGHT OVERLAY ===
-                const textPrimary = ACCENT_HEX;
-                const menuBtnBg = hexToRgba(ACCENT_HEX, 0.16);
-                const menuBtnHover = hexToRgba(ACCENT_HEX, 0.28);
-                const menuBtnText = "#ffffff";
+                const textPrimary = "#ffffff";
+                const menuBtnBg = hexToRgba(ACCENT_HEX, 0.06);
+const menuBtnHover = hexToRgba(ACCENT_HEX, 0.12);
+const menuBtnText = "#ffffff"; // or "#000000" on light backgrounds
 
                 if (this.isMobile) {
                     const padding = 12;
@@ -250,6 +250,7 @@ const MazeRunner = () => {
                         {
                             font: fontSize,
                             fill: textPrimary,
+                            stroke: "#000000",
                             fontWeight: 'bold',
                             align: 'right'
                         }
