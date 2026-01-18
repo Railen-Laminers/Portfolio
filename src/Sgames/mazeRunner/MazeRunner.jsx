@@ -84,6 +84,17 @@ const MazeRunner = () => {
         const MAZE_WIDTH = UI_PANEL_POSITION === 'right' ? GAME_WIDTH - UI_PANEL_WIDTH : GAME_WIDTH;
         const MAZE_HEIGHT = UI_PANEL_POSITION === 'bottom' ? GAME_HEIGHT - 100 : GAME_HEIGHT;
 
+        // --- COLOR: single accent color (change here) ---
+        const ACCENT_HEX = "#a31616"; // <- change this to any hex color you prefer
+        const ACCENT = parseInt(ACCENT_HEX.slice(1), 16); // Phaser uses number hex like 0x16a34a
+
+        function hexToRgba(hex, alpha = 1) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
         class MazeRunnerScene extends Phaser.Scene {
             constructor() {
                 super({ key: "MazeRunnerScene" });
@@ -162,8 +173,8 @@ const MazeRunner = () => {
                 this.walls = [];
                 this.breakableWalls = [];
 
-                const isDark = this.readDarkMode();
-                this.cameras.main.setBackgroundColor(isDark ? 0x0f172a : 0xffffff);
+                // unify camera background to white (canvas background) — you can change this if needed
+                this.cameras.main.setBackgroundColor(0xffffff);
                 this.cameras.main.setBounds(0, 0, MAZE_WIDTH, MAZE_HEIGHT);
 
                 for (let r = 0; r < maze.length; r++) {
@@ -189,7 +200,7 @@ const MazeRunner = () => {
                     finishPos.col * TILE + TILE / 2,
                     finishPos.row * TILE + TILE / 2,
                     TILE * 0.8, TILE * 0.8,
-                    isDark ? 0x16a34a : 0x37c84f
+                    ACCENT
                 ).setOrigin(0.5);
                 this.physics.add.existing(this.finish, true);
 
@@ -223,10 +234,10 @@ const MazeRunner = () => {
                 this.keyI = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.I);
 
                 // === MOBILE: TOP-RIGHT OVERLAY ===
-                const textPrimary = isDark ? "#ffffff" : "#ffffff";
-                const menuBtnBg = isDark ? "#1e293b71" : "#4a556836";
-                const menuBtnHover = isDark ? "#334155" : "#6b7280";
-                const menuBtnText = isDark ? "#f1f5f9" : "#ffffff";
+                const textPrimary = ACCENT_HEX;
+                const menuBtnBg = hexToRgba(ACCENT_HEX, 0.16);
+                const menuBtnHover = hexToRgba(ACCENT_HEX, 0.28);
+                const menuBtnText = "#ffffff";
 
                 if (this.isMobile) {
                     const padding = 12;
@@ -282,8 +293,8 @@ const MazeRunner = () => {
                         });
 
                 } else {
-                    const panelColor = isDark ? 0x071024 : 0xf2f4f7;
-                    const panelAlpha = isDark ? 0.35 : 0.8;
+                    const panelColor = ACCENT; // use accent as fill
+                    const panelAlpha = 0.12;
 
                     const panelX = MAZE_WIDTH + 10;
                     const panelY = 20;
@@ -293,7 +304,7 @@ const MazeRunner = () => {
                     this.uiPanel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, panelColor)
                         .setAlpha(panelAlpha).setOrigin(0, 0).setScrollFactor(0).setDepth(900);
 
-                    this.add.rectangle(panelX - 2, panelY, 2, panelHeight, isDark ? 0x2d3748 : 0xcccccc)
+                    this.add.rectangle(panelX - 2, panelY, 2, panelHeight, ACCENT)
                         .setOrigin(0, 0).setScrollFactor(0).setDepth(899);
 
                     this.menuButton = this.add.text(
@@ -338,13 +349,13 @@ const MazeRunner = () => {
 
                 this.winText = this.add.text(centerX, centerY, "You win!", {
                     font: this.isMobile ? "36px Arial" : "48px Arial",
-                    fill: isDark ? "#fff59d" : "#ffff66"
+                    fill: ACCENT_HEX
                 }).setOrigin(0.5).setDepth(1000).setVisible(false);
 
                 this.retryButton = this.add.text(centerX, centerY + (this.isMobile ? 60 : 80), "Retry", {
                     font: this.isMobile ? "24px Arial" : "32px Arial",
-                    fill: isDark ? "#ff9d9d" : "#ff5555",
-                    backgroundColor: isDark ? "#111827" : "#222222",
+                    fill: "#ffffff",
+                    backgroundColor: hexToRgba(ACCENT_HEX, 0.9),
                     padding: { x: 20, y: 10 },
                 }).setOrigin(0.5).setDepth(1000).setVisible(false)
                     .setInteractive({ useHandCursor: true })
@@ -352,8 +363,8 @@ const MazeRunner = () => {
 
                 this.nextLevelButton = this.add.text(centerX, centerY + (this.isMobile ? 110 : 140), "Next Level", {
                     font: this.isMobile ? "22px Arial" : "28px Arial",
-                    fill: isDark ? "#a7f3d0" : "#00a86b",
-                    backgroundColor: isDark ? "#0b1220" : "#e6ffe9",
+                    fill: "#ffffff",
+                    backgroundColor: hexToRgba(ACCENT_HEX, 0.95),
                     padding: { x: 20, y: 10 },
                 }).setOrigin(0.5).setDepth(1000).setVisible(false)
                     .setInteractive({ useHandCursor: true })
@@ -364,7 +375,7 @@ const MazeRunner = () => {
 
                 this.defeatText = this.add.text(centerX, centerY, "You were caught!", {
                     font: this.isMobile ? "36px Arial" : "48px Arial",
-                    fill: "#ff8b8b7a",
+                    fill: hexToRgba(ACCENT_HEX, 0.85),
                     stroke: "#00000049",
                 }).setOrigin(0.5).setDepth(1000).setVisible(false);
 
@@ -392,9 +403,8 @@ const MazeRunner = () => {
 
             // --- JOYSTICK & UTILS ---
             createVirtualJoystick() {
-                const isDark = this.readDarkMode();
-                const baseColor = isDark ? 0x2d3748 : 0xcccccc;
-                const thumbColor = isDark ? 0x475569 : 0x999999;
+                const baseColor = ACCENT; // use accent
+                const thumbColor = ACCENT; // use accent
                 let baseX, baseY;
                 if (this.isPortrait) {
                     baseX = 80;
@@ -406,10 +416,10 @@ const MazeRunner = () => {
                 const baseRadius = 50;
                 const thumbRadius = 25;
 
-                this.joystick.base = this.add.circle(baseX, baseY, baseRadius, baseColor, 0.3)
-                    .setStrokeStyle(2, isDark ? 0x475569 : 0x999999).setDepth(950).setScrollFactor(0);
-                this.joystick.thumb = this.add.circle(baseX, baseY, thumbRadius, thumbColor, 0.5)
-                    .setStrokeStyle(2, isDark ? 0x64748b : 0x777777).setDepth(951).setScrollFactor(0);
+                this.joystick.base = this.add.circle(baseX, baseY, baseRadius, baseColor, 0.14)
+                    .setStrokeStyle(2, ACCENT).setDepth(950).setScrollFactor(0);
+                this.joystick.thumb = this.add.circle(baseX, baseY, thumbRadius, thumbColor, 0.28)
+                    .setStrokeStyle(2, ACCENT).setDepth(951).setScrollFactor(0);
 
                 this.joystick.x = baseX;
                 this.joystick.y = baseY;
@@ -448,7 +458,7 @@ const MazeRunner = () => {
                 if (this.isPortrait) {
                     this.add.text(baseX, baseY - baseRadius - 15, "Joystick", {
                         font: '12px Arial',
-                        fill: isDark ? '#94a3b8' : '#666666'
+                        fill: ACCENT_HEX
                     }).setOrigin(0.5).setDepth(951).setScrollFactor(0);
                 }
             }
@@ -472,9 +482,8 @@ const MazeRunner = () => {
                 this.joystick.vector.x = (newThumbX - this.joystick.originalX) / this.joystick.radius;
                 this.joystick.vector.y = (newThumbY - this.joystick.originalY) / this.joystick.radius;
 
-                const isDark = this.readDarkMode();
-                this.joystick.base.fillColor = isDark ? 0x3c4b64 : 0xdddddd;
-                this.joystick.base.fillAlpha = 0.4;
+                this.joystick.base.fillColor = ACCENT;
+                this.joystick.base.fillAlpha = 0.3;
             }
 
             resetJoystick() {
@@ -489,17 +498,8 @@ const MazeRunner = () => {
                     duration: 150,
                     ease: 'Power2'
                 });
-                const isDark = this.readDarkMode();
-                this.joystick.base.fillColor = isDark ? 0x2d3748 : 0xcccccc;
-                this.joystick.base.fillAlpha = 0.3;
-            }
-
-            readDarkMode() {
-                try {
-                    const stored = localStorage.getItem("darkMode");
-                    if (stored !== null) return stored === "true";
-                } catch { }
-                return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+                this.joystick.base.fillColor = ACCENT;
+                this.joystick.base.fillAlpha = 0.14;
             }
 
             update() {
@@ -685,19 +685,35 @@ const MazeRunner = () => {
 
             onBreakableHit(player, brick) {
                 if (brick.alpha <= 0) return;
+
+                const bx = brick.x;
+                const by = brick.y;
+                const tileSize = this.TILE;
+
                 this.tweens.add({
                     targets: brick,
                     alpha: 0,
                     duration: 400,
                     onComplete: () => {
-                        brick.destroy();
+                        // Remove the original breakable brick
+                        try { brick.destroy(); } catch (e) { }
+
                         const index = this.breakableWalls.indexOf(brick);
                         if (index !== -1) {
                             this.breakableWalls.splice(index, 1);
                         }
+
+                        //  Visual-only brick tile BEHIND player & enemies
+                        const brickTile = this.add.image(bx, by, "brick")
+                            .setDisplaySize(tileSize, tileSize)
+                            .setOrigin(0.5)
+                            .setDepth(-10); //  lower than characters & enemies
+
+                        // No physics body → passable
                     }
                 });
             }
+
 
             onWin() {
                 if (this.win || this.gameOver) return;
@@ -756,7 +772,7 @@ const MazeRunner = () => {
 
                         const defeatText = this.add.text(centerX, centerY - 60, "You were caught!", {
                             font: this.isMobile ? "36px Arial" : "48px Arial",
-                            fill: "#ff8b8b7a",
+                            fill: hexToRgba(ACCENT_HEX, 0.85),
                             stroke: "#00000049",
                             strokeThickness: 4,
                             align: "center"
@@ -764,8 +780,8 @@ const MazeRunner = () => {
 
                         const retryButton = this.add.text(centerX, centerY + 40, "Try Again", {
                             font: this.isMobile ? "24px Arial" : "32px Arial",
-                            fill: "#ffdddd",
-                            backgroundColor: "#000000aa",
+                            fill: "#ffffff",
+                            backgroundColor: hexToRgba(ACCENT_HEX, 0.95),
                             padding: { x: 24, y: 12 },
                             align: "center"
                         })
@@ -862,20 +878,12 @@ const MazeRunner = () => {
             return { row: grid.length - 2, col: grid[0].length - 2 };
         }
 
-        function readDarkMode() {
-            try {
-                const stored = localStorage.getItem("darkMode");
-                if (stored !== null) return stored === "true";
-            } catch { }
-            return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-        }
-
         const config = {
             type: Phaser.AUTO,
             parent: gameParentRef.current,
             width: GAME_WIDTH,
             height: GAME_HEIGHT,
-            backgroundColor: readDarkMode() ? 0x0f172a : 0xffffff,
+            backgroundColor: 0xffffff, // canvas background
             physics: { default: "arcade", arcade: { gravity: { y: 0 }, debug: false } },
             scene: [MainMenuScene, MazeRunnerScene],
             scale: {
@@ -905,14 +913,6 @@ const MazeRunner = () => {
         };
     }, [navigate]);
 
-    function readDarkMode() {
-        try {
-            const stored = localStorage.getItem("darkMode");
-            if (stored !== null) return stored === "true";
-        } catch { }
-        return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-    }
-
     return (
         <div style={{
             width: "100%",
@@ -921,7 +921,7 @@ const MazeRunner = () => {
             justifyContent: "center",
             alignItems: "center",
             overflow: "hidden",
-            backgroundColor: readDarkMode() ? "#0f172a" : "#ffffff",
+            backgroundColor: "transparent", // let page handle dark/light backgrounds
             position: "relative",
             touchAction: "none"
         }}>
