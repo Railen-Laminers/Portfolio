@@ -459,14 +459,11 @@ const Race = () => {
         return (
             <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 md:p-6 bg-primary-light dark:bg-primary-dark text-secondary-light dark:text-secondary-dark">
                 <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6 md:mb-8 animate-fade-in text-center">
-                    🏁 <span className="text-accent-light dark:text-accent-dark">RACE</span>
+                    <span className="text-accent-light dark:text-accent-dark">RACE</span>
                 </h1>
 
                 {/* Character Selector */}
                 <div className="w-full max-w-6xl mb-6 md:mb-8 text-center animate-slide-in px-2">
-                    <h2 className="text-xl sm:text-2xl font-semibold mb-3 md:mb-4 text-gray-800 dark:text-gray-100">
-                        Choose Your Racer
-                    </h2>
                     <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
                         {RACER_NAMES.map((name) => {
                             const isSelected = selectedRacer === name;
