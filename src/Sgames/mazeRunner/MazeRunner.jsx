@@ -1,4 +1,3 @@
-// src/components/MazeRunner/MazeRunner.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Phaser from "phaser";
@@ -7,8 +6,18 @@ const BASE = import.meta.env.BASE_URL || '/';
 // MazeRunner assets
 export const brick = `${BASE}assets/BrickTileset/Brick.png`;
 export const brickBlack = `${BASE}assets/BrickTileset/BrickBlack.png`;
+export const breakableBrick = `${BASE}assets/BrickTileset/XBrick.png`;
 export const womenMc = `${BASE}assets/Characters/WomenMc.png`;
 export const enemy = `${BASE}assets/Characters/Enemy.png`;
+
+// Randomize Jumpscare images
+export const ed1 = `${BASE}assets/Jumpscare/Ed1.jpg`;
+export const ed2 = `${BASE}assets/Jumpscare/Ed2.jpg`;
+export const ed3 = `${BASE}assets/Jumpscare/Ed3.jpg`;
+export const ed4 = `${BASE}assets/Jumpscare/Ed4.jpg`;
+export const ed5 = `${BASE}assets/Jumpscare/Ed5.jpg`;
+
+export const jumpscareSound = `${BASE}assets/Sounds/Death.mp3`; // ~4 seconds
 
 // Scenes & Debug
 import { MainMenuScene } from "./MainMenuScene";
@@ -26,7 +35,6 @@ const MazeRunner = () => {
         keys: { left: "A", right: "D", up: "W", down: "S" }
     };
 
-    // Handle resize and orientation
     useEffect(() => {
         const handleResize = () => {
             setIsMobile(window.innerWidth <= 768);
@@ -98,8 +106,17 @@ const MazeRunner = () => {
             preload() {
                 this.load.image("brick", brick);
                 this.load.image("brickBlack", brickBlack);
+                this.load.image("breakableBrick", breakableBrick);
                 this.load.spritesheet("womenMc", womenMc, { frameWidth: 66, frameHeight: 82 });
                 this.load.spritesheet("enemy", enemy, { frameWidth: 66, frameHeight: 82 });
+
+                // Jumpscare assets
+                this.load.image("ed1", ed1);
+                this.load.image("ed2", ed2);
+                this.load.image("ed3", ed3);
+                this.load.image("ed4", ed4);
+                this.load.image("ed5", ed5);
+                this.load.audio("jumpscareSound", jumpscareSound);
             }
 
             create() {
@@ -134,14 +151,16 @@ const MazeRunner = () => {
                 const TILE = Math.max(12, Math.min(36, Math.min(maxTileW, maxTileH)));
                 this.TILE = TILE;
 
-                // ❌ REMOVED: this.timeLeft
-
                 this.enemySpeed = 70 + (this.level - 1) * 8;
                 this.enemySpawnDistance = TILE * 3;
 
-                const maze = generateMazeGrid(FIXED_CELLS_X, FIXED_CELLS_Y, 15);
+                const extraPaths = 15;
+                const breakableBricks = 10;
+
+                const maze = generateMazeGrid(FIXED_CELLS_X, FIXED_CELLS_Y, extraPaths, breakableBricks);
                 this.mazeGrid = maze;
                 this.walls = [];
+                this.breakableWalls = [];
 
                 const isDark = this.readDarkMode();
                 this.cameras.main.setBackgroundColor(isDark ? 0x0f172a : 0xffffff);
@@ -155,6 +174,10 @@ const MazeRunner = () => {
                             const wall = this.add.image(x, y, "brickBlack").setDisplaySize(TILE, TILE).setOrigin(0.5);
                             this.physics.add.existing(wall, true);
                             this.walls.push(wall);
+                        } else if (maze[r][c] === 2) {
+                            const brickObj = this.add.image(x, y, "breakableBrick").setDisplaySize(TILE, TILE).setOrigin(0.5);
+                            this.physics.add.existing(brickObj, true);
+                            this.breakableWalls.push(brickObj);
                         } else {
                             this.add.image(x, y, "brick").setDisplaySize(TILE, TILE).setOrigin(0.5);
                         }
@@ -191,6 +214,9 @@ const MazeRunner = () => {
                 this.player.body.setSize(40, 50);
                 this.player.body.setOffset(13, 25);
                 this.walls.forEach(w => this.physics.add.collider(this.player, w));
+                this.breakableWalls.forEach(b => {
+                    this.physics.add.overlap(this.player, b, this.onBreakableHit, null, this);
+                });
                 this.physics.add.overlap(this.player, this.finish, this.onWin, null, this);
 
                 this.keys = this.input.keyboard.addKeys(playerConfig.keys);
@@ -198,7 +224,7 @@ const MazeRunner = () => {
 
                 // === MOBILE: TOP-RIGHT OVERLAY ===
                 const textPrimary = isDark ? "#ffffff" : "#ffffff";
-                const menuBtnBg = isDark ? "#1e293b85" : "#4a5568";
+                const menuBtnBg = isDark ? "#1e293b71" : "#4a556836";
                 const menuBtnHover = isDark ? "#334155" : "#6b7280";
                 const menuBtnText = isDark ? "#f1f5f9" : "#ffffff";
 
@@ -206,7 +232,6 @@ const MazeRunner = () => {
                     const padding = 12;
                     const fontSize = this.isPortrait ? '14px' : '16px';
 
-                    // Level text (top-right)
                     this.levelText = this.add.text(
                         MAZE_WIDTH - padding,
                         padding,
@@ -219,7 +244,6 @@ const MazeRunner = () => {
                         }
                     ).setOrigin(1, 0).setScrollFactor(0).setDepth(910);
 
-                    // Menu button (just below level)
                     this.menuButton = this.add.text(
                         MAZE_WIDTH - padding,
                         padding + 24,
@@ -258,7 +282,6 @@ const MazeRunner = () => {
                         });
 
                 } else {
-                    // === DESKTOP: RIGHT PANEL (unchanged) ===
                     const panelColor = isDark ? 0x071024 : 0xf2f4f7;
                     const panelAlpha = isDark ? 0.35 : 0.8;
 
@@ -306,7 +329,6 @@ const MazeRunner = () => {
                     }).setScrollFactor(0).setDepth(910);
                 }
 
-                // Virtual Joystick (left side — safe from menu)
                 if (this.isMobile) {
                     this.createVirtualJoystick();
                 }
@@ -342,17 +364,13 @@ const MazeRunner = () => {
 
                 this.defeatText = this.add.text(centerX, centerY, "You were caught!", {
                     font: this.isMobile ? "36px Arial" : "48px Arial",
-                    fill: isDark ? "#ff8b8b" : "#ff3333"
+                    fill: "#ff8b8b7a",
+                    stroke: "#00000049",
                 }).setOrigin(0.5).setDepth(1000).setVisible(false);
-
-                // ❌ REMOVED: timeUpText
 
                 this.enemy = null;
                 this.enemySpawned = false;
 
-                // ❌ NO TIMER EVENT
-
-                // Keep pathfinding timer
                 this.pathUpdateInterval = 300;
                 this.pathTimer = this.time.addEvent({
                     delay: this.pathUpdateInterval,
@@ -372,7 +390,7 @@ const MazeRunner = () => {
                 this.events.on('destroy', this._onDestroy, this);
             }
 
-            // --- JOYSTICK & UTILS (unchanged) ---
+            // --- JOYSTICK & UTILS ---
             createVirtualJoystick() {
                 const isDark = this.readDarkMode();
                 const baseColor = isDark ? 0x2d3748 : 0xcccccc;
@@ -547,6 +565,7 @@ const MazeRunner = () => {
                 this.enemy.setDisplaySize(this.TILE * 0.9, this.TILE * 1.1);
                 this.enemy.body.setSize(40, 50);
                 this.enemy.body.setOffset(13, 25);
+                // Collide only with solid walls
                 this.walls.forEach(w => this.physics.add.collider(this.enemy, w));
                 this.physics.add.overlap(this.player, this.enemy, () => this.onDefeat(), null, this);
                 this.enemySpawned = true;
@@ -587,14 +606,26 @@ const MazeRunner = () => {
                 }
             }
 
+            // NEW: Check if breakable brick at (row, col) has been destroyed
+            isBreakableBrickDestroyed(row, col) {
+                const x = col * this.TILE + this.TILE / 2;
+                const y = row * this.TILE + this.TILE / 2;
+                return !this.breakableWalls.some(brick =>
+                    Math.abs(brick.x - x) < 1 && Math.abs(brick.y - y) < 1
+                );
+            }
+
+            // UPDATED: Pathfinding respects destroyed breakable bricks
             findPathBFS(startCell, endCell, grid) {
-                const rows = grid.length, cols = grid[0].length;
+                const rows = grid.length;
+                const cols = grid[0].length;
                 const visited = Array.from({ length: rows }, () => Array(cols).fill(false));
                 const prev = Array.from({ length: rows }, () => Array(cols).fill(null));
                 const q = [];
                 q.push(startCell);
                 visited[startCell.row][startCell.col] = true;
                 const dirs = [{ dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 }];
+
                 while (q.length) {
                     const cur = q.shift();
                     if (cur.row === endCell.row && cur.col === endCell.col) {
@@ -606,10 +637,25 @@ const MazeRunner = () => {
                         }
                         return path.reverse();
                     }
+
                     for (const d of dirs) {
                         const nr = cur.row + d.dr;
                         const nc = cur.col + d.dc;
-                        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !visited[nr][nc] && grid[nr][nc] === 0) {
+
+                        if (nr < 0 || nr >= rows || nc < 0 || nc >= cols || visited[nr][nc]) {
+                            continue;
+                        }
+
+                        const cellValue = grid[nr][nc];
+                        let isPassable = false;
+
+                        if (cellValue === 0) {
+                            isPassable = true;
+                        } else if (cellValue === 2) {
+                            isPassable = this.isBreakableBrickDestroyed(nr, nc);
+                        }
+
+                        if (isPassable) {
                             visited[nr][nc] = true;
                             prev[nr][nc] = cur;
                             q.push({ row: nr, col: nc });
@@ -637,6 +683,22 @@ const MazeRunner = () => {
                 this._onShutdown();
             }
 
+            onBreakableHit(player, brick) {
+                if (brick.alpha <= 0) return;
+                this.tweens.add({
+                    targets: brick,
+                    alpha: 0,
+                    duration: 400,
+                    onComplete: () => {
+                        brick.destroy();
+                        const index = this.breakableWalls.indexOf(brick);
+                        if (index !== -1) {
+                            this.breakableWalls.splice(index, 1);
+                        }
+                    }
+                });
+            }
+
             onWin() {
                 if (this.win || this.gameOver) return;
                 this.win = true;
@@ -652,9 +714,11 @@ const MazeRunner = () => {
                 }
             }
 
+            // UPDATED: Image appears at 1-second mark of sound
             onDefeat() {
                 if (this.win || this.gameOver) return;
                 this.gameOver = true;
+
                 if (this.player?.body) {
                     this.player.body.setVelocity(0, 0);
                     this.player.anims.stop();
@@ -663,22 +727,64 @@ const MazeRunner = () => {
                     this.enemy.body.setVelocity(0, 0);
                     this.enemy.anims.stop();
                 }
-                this.defeatText.setVisible(true);
-                this.retryButton.setVisible(true);
-                this.menuButton.setVisible(true);
-                this.nextLevelButton.setVisible(false);
-                this.winText.setVisible(false);
-                this.defeatText.scale = 1;
-                this.tweens.add({ targets: this.defeatText, scaleX: 1.12, scaleY: 1.12, yoyo: true, repeat: 3, duration: 140 });
+
+                // Hide normal UI
+                this.menuButton.setVisible(false);
                 if (this.isMobile && this.joystick.base) {
                     this.joystick.base.setVisible(false);
                     this.joystick.thumb.setVisible(false);
                 }
+
+                const camWidth = this.cameras.main.width;
+                const camHeight = this.cameras.main.height;
+                const centerX = camWidth / 2;
+                const centerY = camHeight / 2;
+
+                // Play sound immediately
+                const sound = this.sound.add("jumpscareSound", { volume: 0.8 });
+                sound.play();
+
+                // Show jumpscare after 1 second (1000 ms)
+                this.time.delayedCall(1000, () => {
+                    if (this.gameOver && !this.win) {
+                        const jumpscareImages = ["ed1", "ed2", "ed3", "ed4", "ed5"];
+                        const randomImage = Phaser.Utils.Array.GetRandom(jumpscareImages);
+                        const jumpscare = this.add.image(0, 0, randomImage)
+                            .setOrigin(0, 0)
+                            .setDisplaySize(camWidth, camHeight)
+                            .setDepth(2000);
+
+                        const defeatText = this.add.text(centerX, centerY - 60, "You were caught!", {
+                            font: this.isMobile ? "36px Arial" : "48px Arial",
+                            fill: "#ff8b8b7a",
+                            stroke: "#00000049",
+                            strokeThickness: 4,
+                            align: "center"
+                        }).setOrigin(0.5).setDepth(2001);
+
+                        const retryButton = this.add.text(centerX, centerY + 40, "Try Again", {
+                            font: this.isMobile ? "24px Arial" : "32px Arial",
+                            fill: "#ffdddd",
+                            backgroundColor: "#000000aa",
+                            padding: { x: 24, y: 12 },
+                            align: "center"
+                        })
+                            .setOrigin(0.5)
+                            .setDepth(2001)
+                            .setInteractive({ useHandCursor: true })
+                            .on("pointerdown", () => {
+                                jumpscare.destroy();
+                                defeatText.destroy();
+                                retryButton.destroy();
+                                this.scene.restart({ level: this.level });
+                            });
+                    }
+                }, [], this);
             }
         }
 
         // --- Helper Functions ---
-        function generateMazeGrid(cellsX, cellsY, extraPaths = 3) {
+        function generateMazeGrid(cellsX, cellsY, extraPaths = 3, breakableBricks = 2) {
             const rows = cellsY * 2 + 1;
             const cols = cellsX * 2 + 1;
             const grid = Array.from({ length: rows }, () => Array(cols).fill(1));
@@ -690,6 +796,7 @@ const MazeRunner = () => {
             grid[g.row][g.col] = 0;
             stack.push({ cx: 0, cy: 0 });
             const dirs = [{ dx: 0, dy: -1 }, { dx: 1, dy: 0 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }];
+
             while (stack.length) {
                 const cur = stack[stack.length - 1];
                 const neighbors = [];
@@ -712,6 +819,7 @@ const MazeRunner = () => {
                     stack.push(nxt);
                 }
             }
+
             let added = 0;
             let attempts = 0;
             const maxAttempts = 100;
@@ -729,6 +837,19 @@ const MazeRunner = () => {
                 }
                 attempts++;
             }
+
+            let breakAdded = 0;
+            attempts = 0;
+            while (breakAdded < breakableBricks && attempts < 200) {
+                const r = Phaser.Math.RND.between(1, rows - 2);
+                const c = Phaser.Math.RND.between(1, cols - 2);
+                if (grid[r][c] === 1) {
+                    grid[r][c] = 2;
+                    breakAdded++;
+                }
+                attempts++;
+            }
+
             return grid;
         }
 
@@ -741,7 +862,14 @@ const MazeRunner = () => {
             return { row: grid.length - 2, col: grid[0].length - 2 };
         }
 
-        // --- Phaser Config ---
+        function readDarkMode() {
+            try {
+                const stored = localStorage.getItem("darkMode");
+                if (stored !== null) return stored === "true";
+            } catch { }
+            return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        }
+
         const config = {
             type: Phaser.AUTO,
             parent: gameParentRef.current,
