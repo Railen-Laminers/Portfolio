@@ -4,10 +4,11 @@ import DateComponent from "../components/DateComponent";
 
 // React Icons
 import { FaLaravel, FaReact, FaGithub, FaNodeJs, FaJsSquare } from "react-icons/fa";
-import { SiMysql, SiTailwindcss } from "react-icons/si";
+import { SiMysql, SiTailwindcss, SiGodotengine  } from "react-icons/si";
 
 const BASE = import.meta.env.BASE_URL || "/";
 export const maze = `${BASE}assets/SgamesImages/Maze.png`;
+export const Platforming = `${BASE}assets/SgamesImages/Platforming.png`;
 export const uma = `${BASE}assets/SgamesImages/Uma.png`;
 export const race = `${BASE}assets/SgamesImages/Race.png`;
 export const ams = `${BASE}assets/SwebImages/Ams.png`;
@@ -48,6 +49,16 @@ const projects = [
         techStack: [
             { icon: <FaReact />, color: "text-sky-400", name: "React" },
             { icon: <FaJsSquare />, color: "text-yellow-400", name: "Phaser.js" },
+        ],
+    },
+    {
+        name: "Platforming",
+        date: "2026-01-09",
+        category: "games",
+        image: Platforming,
+        link: "https://railen-laminers.github.io/PlatformingGodotGame",
+        techStack: [
+            { icon: <SiGodotengine />, color: "text-sky-400", name: "React" },
         ],
     },
     {

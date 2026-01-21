@@ -236,8 +236,8 @@ const MazeRunner = () => {
                 // === MOBILE: TOP-RIGHT OVERLAY ===
                 const textPrimary = "#ffffff";
                 const menuBtnBg = hexToRgba(ACCENT_HEX, 0.06);
-const menuBtnHover = hexToRgba(ACCENT_HEX, 0.12);
-const menuBtnText = "#ffffff"; // or "#000000" on light backgrounds
+                const menuBtnHover = hexToRgba(ACCENT_HEX, 0.12);
+                const menuBtnText = "#ffffff"; // or "#000000" on light backgrounds
 
                 if (this.isMobile) {
                     const padding = 12;
